@@ -35,3 +35,4 @@ if '__main__' == __name__:
     history = navigate_through_matrix(direction_matrix, start, goal)
     print(f'history: {history}')
 
+
