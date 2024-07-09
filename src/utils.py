@@ -10,6 +10,7 @@ def get_counterpart(
     return pair_dict[direction]
 
 
+# ex1 が間違ってそう
 def judge_continuity(
     d_from: str, # ex1: 'a', ex2: 'a'
     current_direction: str # ex1: 'ad', ex2: 'bc'
