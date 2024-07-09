@@ -1,4 +1,6 @@
-def get_counterpart(direction: str) -> str:
+def get_counterpart(
+    direction: str # ex: 'a'
+) -> str: # ex: 'c'
     pair_dict = {
         'a': 'c',
         'c': 'a',
@@ -9,43 +11,51 @@ def get_counterpart(direction: str) -> str:
 
 
 def judge_continuity(
-    d_from: str, 
-    current_direction: str
-) -> bool:
+    d_from: str, # ex1: 'a', ex2: 'a'
+    current_direction: str # ex1: 'ad', ex2: 'bc'
+) -> bool: # ex1: True, ex2: False
     d_counterpart = get_counterpart(d_from)
     return d_counterpart in current_direction
 
     
 def get_next_coordinate(
-    d_to: str, 
-    current: tuple[int, int]
-) -> tuple[int, int]:
+    d_to: str, # ex: 'a'
+    current_coordinate: tuple[int, int] # ex: (0, 0)
+) -> tuple[int, int]: # ex: (-1, 0)
     
-    next_dict = {
+    update_dict = {
         'a': (-1, 0),
         'b': (0, -1),
         'c': (0, 1),
         'd': (1, 0)
     }
-    next_coordinate = (
-        current[0] + next_dict[d_to][0], 
-        current[1] + next_dict[d_to][1]
+
+    return (
+        current_coordinate[0] + update_dict[d_to][0], 
+        current_coordinate[1] + update_dict[d_to][1]
     )
-    return next_coordinate
+
     
 
 def judge_location_validity(
-    current: tuple[int, int], 
-    shape: tuple[int, int]
-) -> bool:
+    current: tuple[int, int], # ex1: (-1, 0), ex2: (1, 2)
+    shape: tuple[int, int] # ex1: (3, 3), ex2: (3, 3)
+) -> bool: # ex1: False, ex2: True
     return (
         0 <= current[0] < shape[0] and
         0 <= current[1] < shape[1]
     )
 
 
-def get_d_to(d_from: str, current: str) -> str:
-    return current[0] if current[0] != d_from else current[1]
+# バグってる（多分）
+def get_d_to(
+    d_from: str, # ex1: 'a', ex2: 'd'
+    current_direction: str # ex1: 'ad', ex2: ''
+) -> str:
+    if current_direction[0] != d_from:
+        return current_direction[0] # ex1: 'd'
+    else:
+        return current_direction[1]
 
 
 def get_d_from(d_to: str) -> str:
