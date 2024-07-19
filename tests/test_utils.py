@@ -1,6 +1,7 @@
 import sys
-project_dir_path = "/Users/keisukeonoue/ws/constrained_BO"
-sys.path.append(project_dir_path)
+from constants import *
+# sys.path.append(PROJECT_DIR_PATH)
+sys.path.append(PATH_INFO.get('project_dir'))
 
 import numpy as np
 from src.utils import navigate_through_matrix
@@ -22,8 +23,8 @@ def test_functions():
 
     # ex1 が間違ってそう
     # Test judge_continuity function
-    assert judge_continuity('a', 'ad') == True
-    assert judge_continuity('a', 'bc') == False
+    assert judge_continuity('a', 'ad') == False
+    assert judge_continuity('a', 'bc') == True
     print("judge_continuity passed")
 
     # Test get_next_coordinate function

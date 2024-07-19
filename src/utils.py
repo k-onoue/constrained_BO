@@ -14,7 +14,7 @@ def get_counterpart(
 def judge_continuity(
     d_from: str, # ex1: 'a', ex2: 'a'
     current_direction: str # ex1: 'ad', ex2: 'bc'
-) -> bool: # ex1: True, ex2: False
+) -> bool: # ex1: False, ex2: True
     d_counterpart = get_counterpart(d_from)
     return d_counterpart in current_direction
 
@@ -51,8 +51,8 @@ def judge_location_validity(
 # バグってる（多分）
 def get_d_to(
     d_from: str, # ex1: 'a', ex2: 'd'
-    current_direction: str # ex1: 'ad', ex2: ''
-) -> str:
+    current_direction: str # ex1: 'ad', ex2: 'cd'
+) -> str: # ex1: 'd', ex2: 'b'
     if current_direction[0] != d_from:
         return current_direction[0] # ex1: 'd'
     else:
