@@ -19,7 +19,7 @@ class BaseObjective:
 class WarcraftObjective(BaseObjective):
     def __init__(self, weight_matrix: np.ndarray):
         self.map_shape = weight_matrix.shape
-        self.weights = weight_matrix
+        self.weights = weight_matrix / weight_matrix.sum() # normalize weights
 
     def sample(self, trial):
         directions = ['oo', 'ab', 'ac', 'ad', 'bc', 'bd', 'cd']  # search space
@@ -37,7 +37,7 @@ class WarcraftObjective(BaseObjective):
         if history:
             path_weight = sum(self.weights[coord] for coord in history)
             norm_const = manhattan_distance(start, goal)
-            loss1 = 1 - manhattan_distance(history[-1], goal) / norm_const + path_weight
+            loss1 = 1 - (1 - manhattan_distance(history[-1], goal) / norm_const) + path_weight
         else:
             loss1 = 1
 
