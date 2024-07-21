@@ -1,8 +1,8 @@
 import numpy as np
 import optuna
 import plotly.graph_objects as go
-from utils_warcraft import navigate_through_matrix, manhattan_distance
-from utils_benchmark import ackley_function, rosenbrock_function, discretize_function
+from .utils_warcraft import navigate_through_matrix, manhattan_distance
+from .utils_benchmark import ackley_function, rosenbrock_function, discretize_function
 
 
 class BaseObjective:
@@ -55,6 +55,7 @@ class WarcraftObjective(BaseObjective):
         # print(f'direction matrix:\n{sample}\n\n')
         return self.evaluate(sample)
     
+
 class AckleyObjective(BaseObjective):
     def __init__(self, dim: int = 2, search_space: tuple[float, float] = (-1, 1)):
         self.dim = dim
@@ -254,54 +255,3 @@ class DiscreteRosenbrockObjective(RosenbrockObjective):
                           scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)'))
         fig.show()
 
-
-
-# if __name__ == '__main__':
-#     import numpy as np
-#     import optuna
-#     optuna.logging.set_verbosity(optuna.logging.ERROR)
-#     # optuna.logging.set_verbosity(optuna.logging.INFO)
-
-#     weight_matrix = np.array([
-#         [0.1, 0.4, 0.9],
-#         [0.4, 0.1, 0.4],
-#         [0.9, 0.4, 0.1]
-#     ])
-
-#     objective = WarcraftObjective(weight_matrix)
-
-#     n_trials = 10000
-#     seed = 42 
-#     sampler = optuna.samplers.TPESampler(seed=seed)
-
-#     study = optuna.create_study(direction='minimize', sampler=sampler)
-#     study.optimize(objective, n_trials=n_trials)
-
-#     print(study.best_params)
-#     print(study.best_value)
-
-
-if __name__ == '__main__':
-    import numpy as np
-    import optuna
-    # optuna.logging.set_verbosity(optuna.logging.ERROR)
-    optuna.logging.set_verbosity(optuna.logging.INFO)
-
-    # Define the objective function
-    # objective = AckleyObjective(dim=2)
-    # objective = DiscreteAckleyObjective(dim=2, n_split=30)
-    # objective = RosenbrockObjective(dim=2)
-    objective = DiscreteRosenbrockObjective(dim=2, n_split=30)
-
-    n_trials = 100
-    seed = 42 
-    sampler = optuna.samplers.TPESampler(seed=seed)
-
-    study = optuna.create_study(direction='minimize', sampler=sampler)
-    study.optimize(objective, n_trials=n_trials)
-
-    print(study.best_params)
-    print(study.best_value)
-
-    # Plot optimization trajectory
-    objective.plot_optimization_trajectory(study)
