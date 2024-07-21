@@ -1,6 +1,9 @@
 import numpy as np
 
 
+"""
+バッチ処理に対応していないので注意
+"""
 def ackley_function(x, a=20, b=0.2, c=2*np.pi):
     """
     d次元Ackley関数を計算する。
@@ -26,6 +29,9 @@ def ackley_function(x, a=20, b=0.2, c=2*np.pi):
     return a + np.exp(1) + sum_sq_term + cos_term
 
 
+"""
+バッチ処理に対応していないので注意
+"""
 def rosenbrock_function(x, a=1, b=100):
     """
     d次元Rosenbrock関数を計算する。
@@ -46,6 +52,9 @@ def rosenbrock_function(x, a=1, b=100):
     return np.sum(b * (x[1:] - x[:-1]**2)**2 + (a - x[:-1])**2)
 
 
+"""
+バッチ処理に対応していないので注意
+"""
 def discretize_function(x, c=0.1):
     """
     連続値の入力を離散化する。
@@ -79,11 +88,11 @@ if __name__ == '__main__':
     fig_1d_discrete.show()
 
     # 2次元のAckley関数を離散化してプロット
-    x_2d = np.linspace(-5, 5, 100)
-    y_2d = np.linspace(-5, 5, 100)
+    x_2d = np.linspace(-1, 1, 50)
+    y_2d = np.linspace(-1, 1, 50)
     X, Y = np.meshgrid(x_2d, y_2d)
-    X_discrete = discretize_function(X, c=0.5)
-    Y_discrete = discretize_function(Y, c=0.5)
+    X_discrete = discretize_function(X, c=0.1)
+    Y_discrete = discretize_function(Y, c=0.1)
     Z_discrete = np.array([[ackley_function([x, y]) for x, y in zip(row_x, row_y)] for row_x, row_y in zip(X_discrete, Y_discrete)])
 
     fig_2d_discrete = go.Figure(data=[go.Surface(z=Z_discrete, x=X, y=Y)])
