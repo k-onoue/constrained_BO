@@ -1,8 +1,7 @@
 import sys
-from constants import PATH_INFO
-sys.path.append(PATH_INFO.get('project_dir'))
+from path_info import PROJECT_DIR
+sys.path.append(PROJECT_DIR)
 
-import re
 from src.utils_experiment import extract_info_from_filename
 
 

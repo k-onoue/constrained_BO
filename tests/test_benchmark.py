@@ -1,12 +1,12 @@
 import sys
-from constants import PATH_INFO
-sys.path.append(PATH_INFO.get('project_dir'))
+from path_info import PROJECT_DIR
+sys.path.append(PROJECT_DIR)
 
 import numpy as np
 import plotly.graph_objects as go
-from src.utils_benchmark import ackley_function
-from src.utils_benchmark import rosenbrock_function
-from src.utils_benchmark import discretize_function
+from src.utils_benchmark_functions import ackley_function
+from src.utils_benchmark_functions import rosenbrock_function
+from src.utils_benchmark_functions import discretize_function
 
 
 

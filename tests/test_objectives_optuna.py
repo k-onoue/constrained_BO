@@ -1,14 +1,14 @@
 import sys
-from constants import PATH_INFO
-sys.path.append(PATH_INFO.get('project_dir'))
+from path_info import PROJECT_DIR
+sys.path.append(PROJECT_DIR)
 
 import numpy as np
 import optuna
-from src.objectives import WarcraftObjective
-from src.objectives import AckleyObjective
-from src.objectives import RosenbrockObjective
-from src.objectives import DiscreteAckleyObjective
-from src.objectives import DiscreteRosenbrockObjective
+from src.objectives_optuna import WarcraftObjective
+from src.objectives_optuna import AckleyObjective
+from src.objectives_optuna import RosenbrockObjective
+from src.objectives_optuna import DiscreteAckleyObjective
+from src.objectives_optuna import DiscreteRosenbrockObjective
 
 
 if __name__ == '__main__':

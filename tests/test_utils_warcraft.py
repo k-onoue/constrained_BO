@@ -1,6 +1,6 @@
 import sys
-from constants import PATH_INFO
-sys.path.append(PATH_INFO.get('project_dir'))
+from path_info import PROJECT_DIR
+sys.path.append(PROJECT_DIR)
 
 import numpy as np
 from src.utils_warcraft import get_opposite
