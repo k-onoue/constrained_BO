@@ -2,13 +2,13 @@ import os
 import sys
 import re
 import pickle
-from constants import PATH_INFO
+from experiments.path_info import PATH_INFO
 sys.path.append(PATH_INFO.get('project_dir'))
 
 from src.utils_experiment import extract_info_from_filename
 
 import optuna
-from src.objectives import AckleyObjective
+from objectives_optuna import AckleyObjective
 
 
 setting_dict = {
