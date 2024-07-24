@@ -21,7 +21,7 @@ def run_study(storage, weight_matrix, sampler):
         direction='minimize',
         sampler=sampler,
         storage=storage,
-        study_name='parallel_study',
+        study_name='exhaustive_seach',
         load_if_exists=True
     )
     objective = objective_wrapper(weight_matrix)
@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     sampler = optuna.samplers.BruteForceSampler()
 
-    storage = 'sqlite:///example_study.db'  # SQLiteデータベースを使用
+    storage = 'sqlite:///exhaustive_seach.db'  # SQLiteデータベースを使用
 
     # プロセスの数を指定
     n_processes = os.cpu_count()
