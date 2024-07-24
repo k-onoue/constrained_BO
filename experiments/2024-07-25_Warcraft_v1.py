@@ -36,9 +36,9 @@ def run_study(storage, weight_matrix, sampler):
         'number': best_trial.number,
     }
     # JSONファイルに保存
-    with open(os.path.join(EXPT_RESULT_DIR, 'best_trial.json'), 'w') as f:
+    with open(os.path.join(EXPT_RESULT_DIR, 'exhaustive_seach.json'), 'w') as f:
         json.dump(best_trial_data, f, indent=4)
-    print(f"Best trial saved in {os.path.join(EXPT_RESULT_DIR, 'best_trial.json')}")
+    print(f"Best trial saved in {os.path.join(EXPT_RESULT_DIR, 'exhaustive_seach.json')}")
 
 
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     processes = []
     for _ in range(n_processes):
-        p = Process(target=run_study, args=(storage, weight_matrix, n_processes, sampler))
+        p = Process(target=run_study, args=(storage, weight_matrix, sampler))
         p.start()
         processes.append(p)
 
