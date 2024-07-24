@@ -16,7 +16,7 @@ def objective_wrapper(weight_matrix):
     objective = WarcraftObjective(weight_matrix)
     return objective
 
-def run_study(storage, weight_matrix, n_trials, sampler, seed):
+def run_study(storage, weight_matrix, sampler):
     study = optuna.create_study(
         direction='minimize',
         sampler=sampler,
@@ -25,7 +25,7 @@ def run_study(storage, weight_matrix, n_trials, sampler, seed):
         load_if_exists=True
     )
     objective = objective_wrapper(weight_matrix)
-    study.optimize(objective, n_trials=n_trials)
+    study.optimize(objective)
 
     # Best trialの情報を取得
     best_trial = study.best_trial
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     processes = []
     for _ in range(n_processes):
-        p = Process(target=run_study, args=(storage, weight_matrix, n_trials // n_processes, sampler, seed))
+        p = Process(target=run_study, args=(storage, weight_matrix, n_processes, sampler))
         p.start()
         processes.append(p)
 
