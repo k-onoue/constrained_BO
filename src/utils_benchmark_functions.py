@@ -4,7 +4,7 @@ import numpy as np
 """
 バッチ処理に対応していないので注意
 """
-def ackley_function(x, a=20, b=0.2, c=2*np.pi):
+def ackley_function(x, a=10, b=0.2, c=2*np.pi):
     """
     d次元Ackley関数を計算する。
 

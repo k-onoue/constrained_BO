@@ -2,7 +2,7 @@ import numpy as np
 import optuna
 import plotly.graph_objects as go
 from .utils_warcraft import navigate_through_matrix, manhattan_distance
-from .utils_benchmark import ackley_function, rosenbrock_function, discretize_function
+from .utils_benchmark_functions import ackley_function, rosenbrock_function, discretize_function
 
 
 class BaseObjective:
