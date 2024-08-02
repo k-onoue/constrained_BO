@@ -16,7 +16,7 @@ from utils import plot_best_1D
 def objective_function(X):
     return torch.sin(10 * X) * X + torch.cos(2 * X)
 
-def initialize_data(search_space, initial_points=3):
+def initialize_data(search_space, initial_points=1):
     # 各変数の初期サンプルをランダムに選択
     import random
     samples = []
@@ -99,6 +99,7 @@ def update_data(train_X, train_Y, new_X, new_Y):
 def main():
     search_space = {
         'x1': torch.tensor([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]),
+        'x2': torch.tensor([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]),
     }
 
     train_X, train_Y = initialize_data(search_space)
@@ -109,9 +110,9 @@ def main():
 
     best_values = []
 
-    for _ in range(2):
+    for _ in range(5):
         print()
-        print(f'Iteration: {_ + 1}')
+        print(f'Iteration: {_ + 1} ----------------------------------------------------------')
         model = build_and_fit_model(train_X, train_Y)
         acq_func, beta = define_acquisition_function(model, search_space, beta=beta, observed_points=train_X.numpy())
         new_X = optimize_acquisition_function(acq_func, bounds)
@@ -132,7 +133,8 @@ def main():
         best_values.append(train_Y.max().item())
 
     plot_history(best_values)
-    plot_best_1D(train_X, train_Y, model, objective_function)
+    # plot_best_1D(train_X, train_Y, model, objective_function)
 
 if __name__ == "__main__":
     main()
+

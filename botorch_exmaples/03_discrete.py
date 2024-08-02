@@ -1,3 +1,5 @@
+from botorch.acquisition.objective import IdentityMCObjective
+
 """
 https://dro.deakin.edu.au/articles/conference_contribution/Bayesian_Optimization_with_Discrete_Variables/20723074
 """
@@ -9,14 +11,17 @@ from botorch.acquisition import UpperConfidenceBound
 from botorch.optim import optimize_acqf
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
-from utils import plot_history
-from utils import plot_best_1D
+from utils import plot_history, plot_best_1D
 
-# 最適化対象の関数
+# 最適化対象の関数（Ackley関数）
 def objective_function(X):
-    return torch.sin(10 * X) * X + torch.cos(2 * X)
+    x1 = X[:, 0]
+    x2 = X[:, 1]
+    term1 = -20 * torch.exp(-0.2 * torch.sqrt(0.5 * (x1 ** 2 + x2 ** 2)))
+    term2 = -torch.exp(0.5 * (torch.cos(2 * torch.pi * x1) + torch.cos(2 * torch.pi * x2)))
+    return term1 + term2 + 20 + torch.exp(torch.tensor(1.0))
 
-def initialize_data(search_space, initial_points=3):
+def initialize_data(search_space, initial_points=1):
     # 各変数の初期サンプルをランダムに選択
     import random
     samples = []
@@ -45,18 +50,18 @@ def define_acquisition_function(model, search_space, beta, observed_points, opti
             delta_beta, l = params
             l = max(1e-6, l)  # Ensure l is positive
             adjusted_beta = beta + delta_beta
-            ucb = UpperConfidenceBound(model, beta=adjusted_beta)
+            ucb = UpperConfidenceBound(model, beta=adjusted_beta, posterior_transform=IdentityMCObjective())
             candidates, _ = optimize_acqf(
                 acq_function=ucb,
-                bounds=torch.tensor([[0.0], [1.0]]).repeat(1, 1),
+                bounds=torch.tensor([[0.0, 0.0], [1.0, 1.0]]),
                 q=1,
                 num_restarts=5,
                 raw_samples=20,
             )
-            candidate = candidates[0].item()
-            rounded_candidate = min(search_space['x1'], key=lambda x: abs(x - candidate))
+            candidate = candidates[0].numpy()
+            rounded_candidate = [min(search_space[key], key=lambda x: abs(x - candidate[i])) for i, key in enumerate(search_space.keys())]
             penalty = 0 if rounded_candidate not in observed_points else 1
-            return delta_beta + (candidate - rounded_candidate) ** 2 + penalty
+            return delta_beta + sum((torch.tensor(candidate) - torch.tensor(rounded_candidate)) ** 2) + penalty
 
         result = minimize(optimization_objective, [0, 1], bounds=[(0, beta_h), (1e-6, l_h)], method='L-BFGS-B')
         return result.x
@@ -69,7 +74,7 @@ def define_acquisition_function(model, search_space, beta, observed_points, opti
         adjusted_beta = beta
 
     # Create UCB acquisition function with adjusted beta
-    ucb = UpperConfidenceBound(model, beta=adjusted_beta)
+    ucb = UpperConfidenceBound(model, beta=adjusted_beta, posterior_transform=IdentityMCObjective())
     return ucb, adjusted_beta
 
 def optimize_acquisition_function(acq_func, bounds):
@@ -99,19 +104,20 @@ def update_data(train_X, train_Y, new_X, new_Y):
 def main():
     search_space = {
         'x1': torch.tensor([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]),
+        'x2': torch.tensor([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]),
     }
 
     train_X, train_Y = initialize_data(search_space)
 
-    bounds = torch.tensor([[0.0], [1.0]])
+    bounds = torch.tensor([[0.0, 0.0], [1.0, 1.0]])
 
     beta=0.1
 
     best_values = []
 
-    for _ in range(2):
+    for _ in range(5):
         print()
-        print(f'Iteration: {_ + 1}')
+        print(f'Iteration: {_ + 1} ----------------------------------------------------------')
         model = build_and_fit_model(train_X, train_Y)
         acq_func, beta = define_acquisition_function(model, search_space, beta=beta, observed_points=train_X.numpy())
         new_X = optimize_acquisition_function(acq_func, bounds)
