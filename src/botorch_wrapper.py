@@ -125,6 +125,16 @@ class DiscreteBO(BaseBO):
     def step(self):
         acq_function = self.acquisition_function(self.beta)
         new_X = self.optimize_acquisition(acq_function)
+
+        new_X = torch.round(new_X)
+
+        # Check if new_X is in train_X and adjust beta and l if necessary
+        while (new_X == self.train_X).all(dim=1).any():
+            self.adjust_beta_and_l()
+            acq_function = self.acquisition_function(self.beta)
+            new_X = self.optimize_acquisition(acq_function)
+            new_X = torch.round(new_X)
+
         return new_X
 
     def update(self, new_X, new_Y):
@@ -159,21 +169,25 @@ class DiscreteBO(BaseBO):
 
 
 
-# Griewank function with batch input
-def griewank_function(X):
-    r"""
-    f(x) = \sum_{i=1}^d \frac{x_i^2}{4000} - \prod_{i=1}^d \cos \left( \frac{x_i}{\sqrt{i}} \right) + 1
-    """
-    if X.dim() == 1:
-        X = X.unsqueeze(0)  # Make it a 2D tensor with shape (1, dim)
 
-    sum_term = torch.sum(X**2 / 4000, dim=1)
-    prod_term = torch.prod(torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1)
-    return sum_term - prod_term + 1
 
 
 # Run the test
 if __name__ == "__main__":
+
+    # Griewank function with batch input
+    def griewank_function(X):
+        r"""
+        f(x) = \sum_{i=1}^d \frac{x_i^2}{4000} - \prod_{i=1}^d \cos \left( \frac{x_i}{\sqrt{i}} \right) + 1
+        """
+        if X.dim() == 1:
+            X = X.unsqueeze(0)  # Make it a 2D tensor with shape (1, dim)
+
+        sum_term = torch.sum(X**2 / 4000, dim=1)
+        prod_term = torch.prod(torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1)
+        return sum_term - prod_term + 1
+
+
     # Initialize bounds for the optimization
     bounds = torch.tensor([[-50.0, -50.0, -50.0], [600.0, 600.0, 600.0]])
     
@@ -188,31 +202,14 @@ if __name__ == "__main__":
     # Optimization loop
     for i in range(300):
         new_X = bo.step()
-        if (new_X == bo.train_X).all(dim=1).any():
-            bo.adjust_beta_and_l()
-            new_X = bo.step()
         new_Y = griewank_function(new_X).unsqueeze(-1)
         
         bo.update(new_X, new_Y)
         print(f"Iteration {i+1}: Suggested point: {new_X.numpy()}, Function value: {new_Y.numpy()}")
 
-# # Run the test
-# if __name__ == "__main__":
-#     # Initialize bounds for the optimization
-#     bounds = torch.tensor([[-50.0, -50.0, -50.0], [600.0, 600.0, 600.0]])
-    
-#     # Generate initial samples
-#     X_init = torch.randint(-50, 601, (5, 3)).double()
-#     Y_init = griewank_function(X_init).unsqueeze(-1)
+    print()
+    print(f"Best value found: {bo.train_Y.min().item()}")
+    print(f"Best point found: {bo.train_X[bo.train_Y.argmin()].numpy()}")
+    print()
 
-#     # Create an instance of BO and initialize it
-#     bo = BO(bounds=bounds)
-#     bo.initialize(X_init, Y_init)
-    
-#     # Optimization loop
-#     for i in range(300):
-#         new_X = bo.step()
-#         new_Y = griewank_function(new_X).unsqueeze(-1)
-        
-#         bo.update(new_X, new_Y)
-#         print(f"Iteration {i+1}: Suggested point: {new_X.numpy()}, Function value: {new_Y.numpy()}")
+    print(bo.train_X)

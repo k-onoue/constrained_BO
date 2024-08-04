@@ -1,8 +1,9 @@
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torch.distributions.normal import Normal
+from botorch.models.model import Model
+from gpytorch.likelihoods import GaussianLikelihood
+from gpytorch.distributions import MultivariateNormal
 
 
 class BayesianLinearRegression(nn.Module):
@@ -58,11 +59,54 @@ class BayesianMLP(nn.Module):
         
         # ベイズ線形回帰の出力を取得
         y_dist = self.bayesian_output.predict_dist(x)
+
+        if self.min_val or self.max_val:
+            y_mean = torch.clamp(y_dist.mean, min=self.min_val, max=self.max_val)
+        else:
+            y_mean = y_dist.mean
+
+        y_stddev = y_dist.stddev
         
-        # 出力をクランプ
-        y_mean = torch.clamp(y_dist.mean, min=self.min_val, max=self.max_val)
-        y_stddev = y_dist.stddev  # 標準偏差はそのまま
-        
-        # 新しい分布を返す
         return Normal(y_mean, y_stddev)
 
+
+class BayesianMLPModel(Model):
+    def __init__(self, train_X, train_Y, min_val=None, max_val=None):
+        super().__init__()
+        self.bayesian_mlp = BayesianMLP(train_X.shape[1], min_val, max_val)
+        self.likelihood = GaussianLikelihood()
+        self._num_outputs = 1
+        self._train_inputs = train_X
+        self._train_targets = train_Y
+
+    def forward(self, x):
+        return self.bayesian_mlp(x)
+    
+    def posterior(self, X, observation_noise=False, **kwargs):
+        pred_dist = self.bayesian_mlp(X)
+        mean = pred_dist.mean.squeeze(-1)  # Ensure mean is 2D
+        stddev = pred_dist.stddev.squeeze(-1)  # Ensure stddev is 2D
+        covar = torch.diag_embed(stddev**2)
+        return MultivariateNormal(mean, covar)
+    
+    @property
+    def num_outputs(self):
+        return self._num_outputs
+    
+    @property
+    def train_inputs(self):
+        return self._train_inputs
+
+    @property
+    def train_targets(self):
+        return self._train_targets
+
+
+def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    model.train()
+    for epoch in range(num_epochs):
+        optimizer.zero_grad()
+        loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
+        loss.backward()
+        optimizer.step()
