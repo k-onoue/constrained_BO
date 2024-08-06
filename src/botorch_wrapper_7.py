@@ -1,4 +1,5 @@
 import torch
+from botorch.acquisition import AcquisitionFunction
 from botorch.acquisition import UpperConfidenceBound
 from botorch.optim import optimize_acqf
 from scipy.optimize import minimize
@@ -11,6 +12,31 @@ BOループの終了条件を少し工夫しないと，ある（局所）最適
 獲得関数のパラメータの更新を永遠と行って実験が終了しない可能性がある
 """
 
+
+
+# カスタム獲得関数クラスの定義
+class CustomAcquisitionFunction(AcquisitionFunction):
+    def __init__(self, model, lambda1, g):
+        super().__init__(model)
+        self.lambda1 = lambda1
+        self.lambda2 = 1 - lambda1
+        self.g = g
+        self.ucb = UpperConfidenceBound(model, beta=0.1)
+    
+    def forward(self, X):
+        """
+        オリジナル
+        λ1 * g(x) * α(x) + λ2 * (1 - g(x)) * α(x)
+
+        おそらく正しい方法： g を満たす x では α の値を大きくする．満たさないなら小さくする．
+        g_x * α_x     → 間違い．α_x が負なら制約を満たさないほど，値が大きくなる
+
+        重み付き和
+        λ1 * g(x) + λ2 * α(x)
+        """
+        alpha_x = self.ucb(X)
+        g_x = self.g(X)
+        return self.lambda1 * g_x + self.lambda2 * alpha_x
 
 
 class Experiment:
