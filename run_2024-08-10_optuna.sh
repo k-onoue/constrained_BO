@@ -13,7 +13,7 @@ mkdir -p results/$RES_DIR_NAME
 config_file="config.ini"
 
 config_content="[paths]
-project_dir = /work/keisuke-o/ws/constrained_BO
+project_dir = /work/keisuke-o/constrained_BO
 data_dir = %(project_dir)s/data
 results_dir = %(project_dir)s/results"
 
