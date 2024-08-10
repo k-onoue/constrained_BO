@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
     sampler = optuna.samplers.NSGAIISampler()  # NSGAIISampler に変更
     num_trials = 100000  # トライアル数を指定
-    timeout = 3600 * 6  
+    timeout = 3600 * 2
 
     # 最適化を実行
     run_study(weight_matrix, sampler, results_dir, num_trials, timeout, sampler_name)

@@ -3,8 +3,8 @@
 # Resource configuration
 CPUS_PER_TASK=3  # Adjust the number of CPUs per task
 RES_DIR_NAME="temp2"  # Directory name for storing results
-PARTITION="gpu_long"  # Partition name
-TIME="09:00:00"  # Maximum execution time
+PARTITION="gpu_short"  # Partition name
+TIME="03:00:00"  # Maximum execution time
 
 # Create results directory if it doesn't exist
 mkdir -p results/$RES_DIR_NAME
