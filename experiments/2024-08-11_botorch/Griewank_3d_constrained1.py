@@ -40,6 +40,7 @@ def fit_pytorch_model_with_constraint(model, bounds, acqf, num_epochs=1000, lear
         cand1 = abs(bounds[1, 1] - bounds[0, 0])
         cand2 = abs(bounds[1, 0] - bounds[0, 1])
         coeff = max(cand1, cand2)
+        coeff.to(X.device)
 
         X1 = X[:, 0]
         X2 = X[:, 1]

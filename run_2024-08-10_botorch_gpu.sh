@@ -2,12 +2,14 @@
 
 # Resource configuration
 CPUS_PER_TASK=3  # Adjust the number of CPUs per task
-RES_DIR_NAME="temp3"  # Directory name for storing results
 PARTITION="gpu_short"  # Partition name
 TIME="03:00:00"  # Maximum execution time
 
 # Create results directory if it doesn't exist
 mkdir -p results/$RES_DIR_NAME
+
+# Create logs directory if it doesn't exist
+mkdir -p logs
 
 # Overwrite config.ini file
 config_file="config.ini"
@@ -27,7 +29,7 @@ cat $config_file
 
 # Run multiple Python files in parallel using sbatch
 sbatch --job-name=benchmark_${PARTITION} \
-       --output=results/$RES_DIR_NAME/output_constraint_%j.txt \
+       --output=results/output_constraint_%j.txt \
        --gres=gpu:1 \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
