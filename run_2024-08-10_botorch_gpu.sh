@@ -26,7 +26,7 @@ cat $config_file
 
 # Run multiple Python files in parallel using sbatch
 sbatch --job-name=benchmark_${PARTITION} \
-       --output=results/$RES_DIR_NAME/output_gp_%j.txt \
+       --output=results/$RES_DIR_NAME/output_constraint_%j.txt \
        --gres=gpu:1 \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \

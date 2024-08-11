@@ -118,10 +118,12 @@ class Experiment:
             )
         except RuntimeError as e:
             logging.warning(f"RuntimeError during acquisition optimization: {e}")
+            print(f"RuntimeError during acquisition optimization: {e}")
             return None
 
         if torch.isnan(candidates).any() or torch.isinf(candidates).any():
             logging.warning("Candidates contain NaN or Inf values")
+            print("Candidates contain NaN or Inf values")
             return None
 
         return candidates.detach()
@@ -165,9 +167,11 @@ class Experiment:
             elapsed_time = time.time() - self.start_time
             if self.time_budget and elapsed_time > self.time_budget:
                 logging.info(f"Stopping candidate search due to time limit during beta adjustment. Elapsed time: {elapsed_time:.2f} seconds")
+                print(f"Stopping candidate search due to time limit during beta adjustment. Elapsed time: {elapsed_time:.2f} seconds")
                 return None
 
             logging.info(f'Trying to get new candidate with beta = {self.beta}')
+            print(f'Trying to get new candidate with beta = {self.beta}')
 
             self.adjust_beta()
             acq_function = self.acquisition_function(self.beta)
@@ -195,6 +199,7 @@ class Experiment:
             elapsed_time = time.time() - self.start_time
             if self.time_budget and elapsed_time > self.time_budget:
                 logging.info(f"Stopping optimization due to time limit. Elapsed time: {elapsed_time:.2f} seconds")
+                print(f"Stopping optimization due to time limit. Elapsed time: {elapsed_time:.2f} seconds")
                 break
 
             fit_pytorch_model_with_constraint(
@@ -208,6 +213,7 @@ class Experiment:
             new_x, new_y = self.optimize_acqf_and_get_observation()
             if new_x is None or new_y is None:
                 logging.info("Stopping optimization due to numerical issues.")
+                print("Stopping optimization due to numerical issues.")
                 break
             
             self.train_x = torch.cat([self.train_x, new_x])
@@ -220,8 +226,10 @@ class Experiment:
             self.best_x_values.append(best_x)
 
             logging.info(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {best_x}, New x = {new_x}")
+            print(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {best_x}, New x = {new_x}")
 
         logging.info("All done.")
+        print("All done.")
 
     def save_results(self):
         # 実験結果のディレクトリを設定
@@ -246,17 +254,21 @@ class Experiment:
                     self.train_y):
                 writer.writerow([i, best_x.tolist(), best_val, train_x.tolist(), train_y.item()])
         logging.info(f"Results saved to {csv_filename}")
+        print(f"Results saved to {csv_filename}")
 
         # モデルの状態を保存
         model_save_path = os.path.join(results_dir, f"model_state_{current_time}.pth")
         torch.save(self.model.state_dict(), model_save_path)
         logging.info(f"Model state saved to {model_save_path}")
+        print(f"Model state saved to {model_save_path}")
 
 
 if __name__ == "__main__":
     import warnings
 
     warnings.filterwarnings('ignore')
+
+    print(f'torch.cuda.is_available(): {torch.cuda.is_available()}')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.float
