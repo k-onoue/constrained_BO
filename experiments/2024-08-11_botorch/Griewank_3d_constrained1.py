@@ -407,7 +407,7 @@ class Experiment:
         return train_x, train_y
 
     def initialize_model(self, train_x, train_y):
-        model = BayesianMLPModel(train_x, train_y).to(train_x.device)
+        model = BayesianMLPModel(train_x, train_y, clipping=True).to(train_x.device)
         return model
 
     def acquisition_function(self, beta):

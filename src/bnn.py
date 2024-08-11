@@ -42,7 +42,7 @@ class BayesianLinearRegression(nn.Module):
 
 
 class BayesianMLP(nn.Module):
-    def __init__(self, input_dim, min_val=None, max_val=None):
+    def __init__(self, input_dim, min_val=None, max_val=None, clipping=False):
         super(BayesianMLP, self).__init__()
         self.hidden1 = nn.Linear(input_dim, 64)
         self.hidden2 = nn.Linear(64, 64)
@@ -65,15 +65,19 @@ class BayesianMLP(nn.Module):
         else:
             y_mean = y_dist.mean
 
-        y_stddev = y_dist.stddev
+        if self.clipping:
+            y_mean = y_mean.clamp(min=-1e2, max=1e2)
+            y_stddev = y_dist.stddev.clamp(min=1e-6, max=1e1)
+        else:
+            y_stddev = y_dist.stddev
         
         return Normal(y_mean, y_stddev)
 
 
 class BayesianMLPModel(Model):
-    def __init__(self, train_X, train_Y, min_val=None, max_val=None):
+    def __init__(self, train_X, train_Y, min_val=None, max_val=None, clipping=False):
         super().__init__()
-        self.bayesian_mlp = BayesianMLP(train_X.shape[1], min_val, max_val)
+        self.bayesian_mlp = BayesianMLP(train_X.shape[1], min_val, max_val, clipping=clipping)
         self.likelihood = GaussianLikelihood()
         self._num_outputs = 1
         self._train_inputs = train_X
@@ -100,7 +104,7 @@ class BayesianMLPModel(Model):
     @property
     def train_targets(self):
         return self._train_targets
-
+    
 
 def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -112,12 +116,3 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
         optimizer.step()
 
 
-def fit_gpytorch_model_with_constraint(model, num_epochs=1000, learning_rate=0.01):
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    model.train()
-    for epoch in range(num_epochs):
-        optimizer.zero_grad()
-        output = model(model.train_inputs)
-        loss = -model.likelihood(output, model.train_targets).log_prob().mean()
-        loss.backward()
-        optimizer.step()
