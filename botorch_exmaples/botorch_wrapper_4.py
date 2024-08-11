@@ -1,9 +1,17 @@
+import sys
+import configparser
+
+config = configparser.ConfigParser()
+config_path = './config.ini' # プロジェクトルートから実行するなら './config.ini'
+config.read(config_path)
+PROJECT_DIR = config['paths']['project_dir']
+sys.path.append(PROJECT_DIR)
+
 import torch
 from botorch.optim import optimize_acqf
 from botorch.acquisition import UpperConfidenceBound
-from bnn import BayesianMLPModel, fit_pytorch_model
+from src.bnn import BayesianMLPModel, fit_pytorch_model
     
-
 
 class Experiment:
     def __init__(self, config):
@@ -38,7 +46,7 @@ class Experiment:
     def run(self):
         for iteration in range(1, self.config["n_iterations"] + 1):
 
-            fit_pytorch_model(self.model)
+            fit_pytorch_model(self.model, iterations=10000)
             
             UCB = UpperConfidenceBound(model=self.model, beta=2.0)  # betaの値を設定
             new_x, new_y = self.optimize_acqf_and_get_observation(UCB)

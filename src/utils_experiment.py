@@ -49,6 +49,16 @@ def generate_integer_samples(bounds, n, device=torch.device("cpu")):
     return unique_samples
 
 
+def negate_function(func):
+    """ 
+    目的関数の符号を反転させる
+    """
+    def negated_func(X):
+        return -func(X)
+    return negated_func
+
+
+
 # if __name__ == "__main__":
 #     # テスト
 #     bounds = [[0, 0, 0, 0, 0, 0], [4, 5, 6, 7, 8, 9]]

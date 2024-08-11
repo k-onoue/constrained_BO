@@ -110,3 +110,14 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
         loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
         loss.backward()
         optimizer.step()
+
+
+def fit_gpytorch_model_with_constraint(model, num_epochs=1000, learning_rate=0.01):
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    model.train()
+    for epoch in range(num_epochs):
+        optimizer.zero_grad()
+        output = model(model.train_inputs)
+        loss = -model.likelihood(output, model.train_targets).log_prob().mean()
+        loss.backward()
+        optimizer.step()

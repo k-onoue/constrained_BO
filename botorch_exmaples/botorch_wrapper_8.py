@@ -4,7 +4,7 @@ from datetime import datetime
 # ログ設定
 # 現在の時刻を取得して、ログファイル名に追加
 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_filename = f"experiment_{current_time}.log"
+log_filename = f"experiment_8_{current_time}.log"
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
@@ -33,6 +33,7 @@ BOループの終了条件を少し工夫しないと，ある（局所）最適
 獲得関数のパラメータの更新を永遠と行って実験が終了しない可能性がある
 """
 
+
 def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
     def g(X, scale=1.0):
         # x1 と x2 の差の絶対値を計算
@@ -51,60 +52,17 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
         optimizer.zero_grad()
         # loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
         g_eval = g(model.train_inputs)
-        loss = -(model(model.train_inputs).log_prob(model.train_targets).T @ g_eval) / model.train_targets.size(0)
-
+        ucb = UpperConfidenceBound(model, beta=0.1)
+        ucb_eval = []
+        for x in model.train_inputs:
+            x = x.unsqueeze(1).reshape(1, -1)
+            ucb_eval.append(ucb(x))
+        ucb_eval = torch.tensor(ucb_eval).reshape(-1, 1)
+        loss1 = (1 - g_eval).T @ ucb_eval 
+        loss2 = -(model(model.train_inputs).log_prob(model.train_targets).T @ g_eval) / model.train_targets.size(0)
+        loss = param1 * loss1 + param2 * loss2
         loss.backward()
         optimizer.step()
-
-
-
-def fit_pytorch_model_2(model, num_epochs=1000, learning_rate=0.01):
-    def g(X, scale=1.0):
-        # x1 と x2 の差の絶対値を計算
-        diff = torch.abs(X[:, 0] - X[:, 1])
-        # 差の絶対値に応じて、指数関数的に 0 に近づくように変換
-        result = torch.exp(-scale * diff)
-        # n x 1 の形状に変換して返す
-        return result.unsqueeze(1)
-    
-    param1 = 0.5
-    param2 = 1 - param1
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    model.train()
-    for epoch in range(num_epochs):
-        optimizer.zero_grad()
-        # loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
-        g_eval = g(model.train_inputs)
-        loss = -(model(model.train_inputs).log_prob(model.train_targets).T @ g_eval) / model.train_targets.size(0)
-
-        loss.backward()
-        optimizer.step()
-
-
-# カスタム獲得関数クラスの定義
-# class CustomAcquisitionFunction(AcquisitionFunction):
-#     def __init__(self, model, lambda1, g):
-#         super().__init__(model)
-#         self.lambda1 = lambda1
-#         self.lambda2 = 1 - lambda1
-#         self.g = g
-#         self.ucb = UpperConfidenceBound(model, beta=0.1)
-    
-#     def forward(self, X):
-#         """
-#         オリジナル
-#         λ1 * g(x) * α(x) + λ2 * (1 - g(x)) * α(x)
-
-#         おそらく正しい方法： g を満たす x では α の値を大きくする．満たさないなら小さくする．
-#         g_x * α_x     → 間違い．α_x が負なら制約を満たさないほど，値が大きくなる
-
-#         重み付き和
-#         λ1 * g(x) + λ2 * α(x)
-#         """
-#         alpha_x = self.ucb(X)
-#         g_x = self.g(X)
-#         return self.lambda1 * g_x + self.lambda2 * alpha_x
 
 
 class Experiment:
@@ -112,6 +70,7 @@ class Experiment:
         self.config = config
         self.bounds = config["bounds"]
         self.objective_function = config["objective_function"]
+        self.direction = config["direction"]
         self.train_x, self.train_y = self.generate_initial_data(config["initial_points"])
         self.model = self.initialize_model(self.train_x, self.train_y)
         self.best_values = []  
@@ -202,29 +161,6 @@ class Experiment:
         new_y = self.objective_function(new_x).unsqueeze(-1)
         return new_x, new_y
 
-    # def run(self):
-    #     for iteration in range(1, self.config["n_iterations"] + 1):
-
-    #         fit_pytorch_model(self.model)
-            
-    #         new_x, new_y = self.optimize_acqf_and_get_observation()
-    #         if new_x is None or new_y is None:
-    #             print("Stopping optimization due to numerical issues.")
-    #             break
-            
-    #         self.train_x = torch.cat([self.train_x, new_x])
-    #         self.train_y = torch.cat([self.train_y, new_y])
-    #         self.model = self.initialize_model(self.train_x, self.train_y)
-            
-    #         best_value = self.train_y.max().item()
-    #         self.best_values.append(best_value)
-
-    #         print(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {new_x}")
-    #         logging.info(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {new_x}")
-
-    #     print("All done.")
-    #     logging.info("All done.")
-
     def run(self):
         for iteration in range(1, self.config["n_iterations"] + 1):
 
@@ -235,16 +171,19 @@ class Experiment:
                 print("Stopping optimization due to numerical issues.")
                 break
             
+            print()
+            print(f'new_x: {new_x}')
+            print()
+
             self.train_x = torch.cat([self.train_x, new_x])
             self.train_y = torch.cat([self.train_y, new_y])
             self.model = self.initialize_model(self.train_x, self.train_y)
             
-            best_value = self.train_y.min().item()
-            best_x = self.train_x[self.train_y.argmin()]
+            best_value = self.train_y.max().item()
             self.best_values.append(best_value)
 
-            print(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {best_x}")
-            logging.info(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {best_x}")
+            print(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {new_x}")
+            logging.info(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {new_x}")
 
         print("All done.")
         logging.info("All done.")
@@ -283,6 +222,7 @@ if __name__ == "__main__":
         "raw_samples": 20,
         "n_iterations": 1000,
         "objective_function": objective_function,
+        "direction": "minimize",
         "algo_params": {
             "beta": 2.0,
             "beta_h": 10.0,
