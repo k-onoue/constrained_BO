@@ -66,7 +66,7 @@ class BayesianMLP(nn.Module):
             y_mean = y_dist.mean
 
         if self.clipping:
-            y_mean = y_mean.clamp(min=-1e2, max=1e2)
+            y_mean = y_mean.clamp(min=-1e6, max=1e6)
             y_stddev = y_dist.stddev.clamp(min=1e-6, max=1e1)
         else:
             y_stddev = y_dist.stddev
