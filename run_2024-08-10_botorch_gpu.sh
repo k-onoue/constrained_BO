@@ -15,7 +15,7 @@ config_file="config.ini"
 config_content="[paths]
 project_dir = /work/keisuke-o/constrained_BO
 data_dir = %(project_dir)s/data
-results_dir = %(project_dir)s/results"
+results_dir = %(project_dir)s/results
 logs_dir = %(project_dir)s/logs"
 
 # Overwrite config.ini file
