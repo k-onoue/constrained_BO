@@ -51,6 +51,8 @@ class BayesianMLP(nn.Module):
         self.bayesian_output = BayesianLinearRegression(64, 1)
         self.min_val = min_val
         self.max_val = max_val
+
+        self.clipping = clipping
     
     def forward(self, x):
         x = self.relu(self.hidden1(x))
