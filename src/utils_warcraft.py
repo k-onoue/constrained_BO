@@ -5,13 +5,8 @@ def get_opposite(direction: str) -> str:
     >>> get_opposite('a')
     'c'
     """
-    pair_dict = {
-        'a': 'c',
-        'c': 'a',
-        'b': 'd',
-        'd': 'b'
-    }
-    return pair_dict.get(direction, '')
+    pair_dict = {"a": "c", "c": "a", "b": "d", "d": "b"}
+    return pair_dict.get(direction, "")
 
 
 def judge_continuity(d_from: str, current_direction: str) -> bool:
@@ -27,19 +22,16 @@ def judge_continuity(d_from: str, current_direction: str) -> bool:
     return d_opposite in current_direction
 
 
-def get_next_coordinate(d_to: str, current_coordinate: tuple[int, int]) -> tuple[int, int]:
+def get_next_coordinate(
+    d_to: str, current_coordinate: tuple[int, int]
+) -> tuple[int, int]:
     """
     Examples
     --------
     >>> get_next_coordinate('a', (0, 0))
     (-1, 0)
     """
-    update_dict = {
-        'a': (-1, 0),
-        'b': (0, -1),
-        'c': (0, 1),
-        'd': (1, 0)
-    }
+    update_dict = {"a": (-1, 0), "b": (0, -1), "c": (0, 1), "d": (1, 0)}
     delta = update_dict.get(d_to, (0, 0))
     return (current_coordinate[0] + delta[0], current_coordinate[1] + delta[1])
 
@@ -63,7 +55,9 @@ def get_d_to(d_from: str, current_direction: str) -> str:
     >>> get_d_to('a', 'ad')
     'd'
     """
-    return current_direction[1] if current_direction[0] == d_from else current_direction[0]
+    return (
+        current_direction[1] if current_direction[0] == d_from else current_direction[0]
+    )
 
 
 def navigate_through_matrix(direction_matrix, start, goal):
@@ -71,11 +65,11 @@ def navigate_through_matrix(direction_matrix, start, goal):
     current = start
     shape = direction_matrix.shape
 
-    if direction_matrix[current] != 'bd':
+    if direction_matrix[current] != "bd":
         return history
 
     history.append(current)
-    d_to = 'd'
+    d_to = "d"
     next_pos = get_next_coordinate(d_to, current)
 
     while judge_location_validity(next_pos, shape) and current != goal:
@@ -103,4 +97,3 @@ def manhattan_distance(coord1: tuple[int, int], coord2: tuple[int, int]) -> int:
     6
     """
     return abs(coord1[0] - coord2[0]) + abs(coord1[1] - coord2[1])
-
