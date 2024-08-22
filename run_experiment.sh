@@ -36,4 +36,23 @@ sbatch --job-name=benchmark_${PARTITION} \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-22_botorch/Warcraft_3x4.py"
+       --wrap="python3 experiments/2024-08-22_botorch/Warcraft_3x4_3.py"
+
+# Run multiple Python files in parallel using sbatch
+sbatch --job-name=benchmark_${PARTITION} \
+       --output=results/output_constraint_%j.txt \
+       --cpus-per-task=$CPUS_PER_TASK \
+       --partition=$PARTITION \
+       --time=$TIME \
+       --wrap="python3 experiments/2024-08-22_botorch/Warcraft_3x4_4.py"
+
+# Run multiple Python files in parallel using sbatch
+sbatch --job-name=benchmark_${PARTITION} \
+       --output=results/output_constraint_%j.txt \
+       --cpus-per-task=$CPUS_PER_TASK \
+       --gpu-count=1 \
+       --partition=$PARTITION \
+       --time=$TIME \
+       --wrap="python3 experiments/2024-08-22_botorch/Warcraft_3x4_5.py"
+
+

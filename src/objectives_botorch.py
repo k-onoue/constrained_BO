@@ -182,3 +182,28 @@ def generate_initial_data(
     X_train = values[torch.randint(0, len(values), (dataset_size, n, m))]
     y_train = torch.stack([objective_function(x) for x in X_train]).unsqueeze(-1)
     return X_train, y_train
+
+
+
+if __name__ == "__main__":
+    objective = WarcraftObjectiveBoTorch(
+        torch.tensor(
+            [
+                [0.1, 0.4, 0.8, 0.8],
+                [0.2, 0.4, 0.4, 0.8],
+                [0.8, 0.1, 0.1, 0.2],
+            ]
+        )
+    )
+    
+    val = objective(
+        torch.tensor(
+            [
+                [2, -3, -3, -3],
+                [1, 0, -3, -3],
+                [-3, 1, -1, -1],
+            ]
+        )
+    )
+
+    print(val)

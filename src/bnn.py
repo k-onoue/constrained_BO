@@ -8,7 +8,7 @@ from torch.distributions.normal import Normal
 
 # Bayesian Linear Regression class
 class BayesianLinearRegression(nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim: int, output_dim: int) -> None:
         super(BayesianLinearRegression, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -19,7 +19,7 @@ class BayesianLinearRegression(nn.Module):
         self.b_mu = nn.Parameter(torch.zeros(output_dim))
         self.b_log_sigma = nn.Parameter(torch.zeros(output_dim))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         w_sigma = torch.exp(self.w_log_sigma)
         b_sigma = torch.exp(self.b_log_sigma)
 
@@ -29,7 +29,7 @@ class BayesianLinearRegression(nn.Module):
 
         return torch.matmul(x, w) + b
 
-    def predict_dist(self, x):
+    def predict_dist(self, x: torch.Tensor) -> Normal:
         y = self.forward(x)
 
         # Compute uncertainty in the output
@@ -46,13 +46,13 @@ class BayesianLinearRegression(nn.Module):
 class BayesianMLP(nn.Module):
     def __init__(
         self,
-        input_dim,
-        hidden_unit_size=64,
-        num_hidden_layers=3,
-        min_val=None,
-        max_val=None,
-        clipping=False,
-    ):
+        input_dim: int,
+        hidden_unit_size: int = 64,
+        num_hidden_layers: int = 3,
+        min_val: float = None,
+        max_val: float = None,
+        clipping: bool = False,
+    ) -> None:
         super(BayesianMLP, self).__init__()
         layers = []
         layers.append(nn.Linear(input_dim, hidden_unit_size))
@@ -68,7 +68,7 @@ class BayesianMLP(nn.Module):
         self.max_val = max_val
         self.clipping = clipping
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> Normal:
         x = self.hidden_layers(x)
 
         # Get output from Bayesian linear regression
@@ -92,14 +92,14 @@ class BayesianMLP(nn.Module):
 class BayesianMLPModel(Model):
     def __init__(
         self,
-        train_X,
-        train_Y,
-        hidden_unit_size=64,
-        num_hidden_layers=3,
-        min_val=None,
-        max_val=None,
-        clipping=False,
-    ):
+        train_X: torch.Tensor,
+        train_Y: torch.Tensor,
+        hidden_unit_size: int = 64,
+        num_hidden_layers: int = 3,
+        min_val: float = None,
+        max_val: float = None,
+        clipping: float = False,
+    ) -> None:
         super().__init__()
         self.bayesian_mlp = BayesianMLP(
             input_dim=train_X.shape[1],
@@ -118,10 +118,12 @@ class BayesianMLPModel(Model):
             train_Y.device
         )  # Ensure it's on the right device
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> Normal:
         return self.bayesian_mlp(x.to(x.device))
 
-    def posterior(self, X, observation_noise=False, **kwargs):
+    def posterior(
+        self, X: torch.Tensor, observation_noise=False, **kwargs
+    ) -> MultivariateNormal:
         pred_dist = self.bayesian_mlp(X.to(X.device))
         mean = pred_dist.mean.squeeze(-1)  # Ensure mean is 2D
         stddev = pred_dist.stddev.squeeze(-1)  # Ensure stddev is 2D
@@ -129,20 +131,26 @@ class BayesianMLPModel(Model):
         return MultivariateNormal(mean, covar)
 
     @property
-    def num_outputs(self):
+    def num_outputs(self) -> int:
         return self._num_outputs
 
     @property
-    def train_inputs(self):
+    def train_inputs(self) -> torch.Tensor:
         return self._train_inputs
 
     @property
-    def train_targets(self):
+    def train_targets(self) -> torch.Tensor:
         return self._train_targets
+
+    def set_train_data(
+        self, inputs: torch.Tensor, targets: torch.Tensor, **kwargs
+    ) -> None:
+        self._train_inputs = inputs
+        self._train_targets = targets
 
 
 # Function to train the model with GPU support
-def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
+def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01) -> None:
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     model.train()
     for epoch in range(num_epochs):

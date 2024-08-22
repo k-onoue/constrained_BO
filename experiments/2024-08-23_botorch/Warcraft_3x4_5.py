@@ -30,7 +30,7 @@ from src.objectives_botorch import WarcraftObjectiveBoTorch, generate_initial_da
 
 # ログの設定
 current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-log_filename_base = "Warcraft_3x4_botorch"
+log_filename_base = "Warcraft_3x4_botorch_5"
 log_filename = f"{current_time}_{log_filename_base}.log"
 log_filepath = os.path.join(LOG_DIR, log_filename)
 logging.basicConfig(
@@ -66,12 +66,12 @@ y_train = y_train.to(device)
 
 # Step 3: Train the Bayesian MLP Model
 model = BayesianMLPModel(
-    X_train_flat, y_train, hidden_unit_size=128, num_hidden_layers=5
+    X_train_flat, y_train, hidden_unit_size=256, num_hidden_layers=5
 ).to(device)
 fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01)
 
 # Repeat optimization for a specified number of iterations
-n_iterations = 1000
+n_iterations = 10000
 
 for iteration in range(n_iterations):
     print(f"Iteration {iteration + 1}/{n_iterations}")
@@ -105,8 +105,6 @@ for iteration in range(n_iterations):
 
     # Refit the Bayesian MLP model
     model.set_train_data(X_train_flat, y_train)
-    print(model.train_inputs.shape)
-
     fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01)
 
 
