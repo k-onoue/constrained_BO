@@ -7,7 +7,8 @@ def test_function(x):
     r"""
     $f(x) = e^{-(x-2)^2} + e^{-\left(\frac{x-6}{10}\right)^2} + \frac{1}{e^{x^2} + 1}$
     """
-    return np.exp(-(x - 2) ** 2) + np.exp(-(x - 6) ** 2 / 10) + 1 / (x ** 2 + 1)
+    return np.exp(-((x - 2) ** 2)) + np.exp(-((x - 6) ** 2) / 10) + 1 / (x**2 + 1)
+
 
 # Schubert function with batch input
 def schubert_function(X):
@@ -18,6 +19,7 @@ def schubert_function(X):
     sum1 = torch.sum(j * torch.cos((j + 1) * X[:, 0:1] + j), dim=1)
     sum2 = torch.sum(j * torch.cos((j + 1) * X[:, 1:2] + j), dim=1)
     return sum1 * sum2
+
 
 # Eggholder function with batch input
 def eggholder_function(X):
@@ -30,16 +32,17 @@ def eggholder_function(X):
     term2 = -x1 * torch.sin(torch.sqrt(torch.abs(x1 - (x2 + 47))))
     return term1 + term2
 
+
 # Griewank function with batch input
 def griewank_function(X):
     r"""
     f(x) = \sum_{i=1}^d \frac{x_i^2}{4000} - \prod_{i=1}^d \cos \left( \frac{x_i}{\sqrt{i}} \right) + 1
     """
     sum_term = torch.sum(X**2 / 4000, dim=1)
-    prod_term = torch.prod(torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1)
+    prod_term = torch.prod(
+        torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1
+    )
     return sum_term - prod_term + 1
-
-
 
 
 # if __name__ == "__main__":
@@ -83,4 +86,3 @@ def griewank_function(X):
 #     ax.set_ylabel('x2')
 #     ax.set_zlabel('f(x1, x2)')
 #     plt.show()
-
