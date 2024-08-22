@@ -112,6 +112,7 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     model.train()
     for epoch in range(num_epochs):
+        # print(f'Epoch {epoch+1}/{num_epochs}')
         optimizer.zero_grad()
         loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
         loss.backward()
