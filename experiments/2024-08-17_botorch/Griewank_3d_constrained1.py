@@ -13,26 +13,31 @@ from scipy.optimize import minimize
 
 # 設定の読み込み
 config = configparser.ConfigParser()
-config_path = './config.ini'
+config_path = "./config.ini"
 config.read(config_path)
-PROJECT_DIR = config['paths']['project_dir']
-EXPT_RESULT_DIR = config['paths']['results_dir']
-LOG_DIR = config['paths']['logs_dir']
+PROJECT_DIR = config["paths"]["project_dir"]
+EXPT_RESULT_DIR = config["paths"]["results_dir"]
+LOG_DIR = config["paths"]["logs_dir"]
 sys.path.append(PROJECT_DIR)
 
 from src.bnn import BayesianMLPModel
 from src.utils_experiment import generate_integer_samples, negate_function
 
 # ログの設定
-current_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 log_filename_base = "Griewank_3d_strictly_constrained1"
 log_filename = f"{current_time}_{log_filename_base}.log"
 log_filepath = os.path.join(LOG_DIR, log_filename)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
-                    handlers=[logging.FileHandler(log_filepath), logging.StreamHandler(sys.stdout)])
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler(log_filepath), logging.StreamHandler(sys.stdout)],
+)
 
 
-def fit_pytorch_model_with_constraint(model, bounds, acqf, num_epochs=1000, learning_rate=0.01):
+def fit_pytorch_model_with_constraint(
+    model, bounds, acqf, num_epochs=1000, learning_rate=0.01
+):
     def g(X, bounds):
         """
         制約：x1 == x2
@@ -45,7 +50,9 @@ def fit_pytorch_model_with_constraint(model, bounds, acqf, num_epochs=1000, lear
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     model.train()
 
-    lambda1 = torch.tensor(0.5, device=model.train_inputs.device, dtype=model.train_inputs.dtype)
+    lambda1 = torch.tensor(
+        0.5, device=model.train_inputs.device, dtype=model.train_inputs.dtype
+    )
     lambda2 = 1 - lambda1
 
     X = model.train_inputs
@@ -66,7 +73,10 @@ def fit_pytorch_model_with_constraint(model, bounds, acqf, num_epochs=1000, lear
 
         ones = torch.ones_like(g_eval)
 
-        loss = (lambda1 * (ones - g_eval).T * (-1) @ acqf_eval + lambda2 * (-f(X).log_prob(y).T @ g_eval)) / m
+        loss = (
+            lambda1 * (ones - g_eval).T * (-1) @ acqf_eval
+            + lambda2 * (-f(X).log_prob(y).T @ g_eval)
+        ) / m
 
         loss.backward()
         optimizer.step()
@@ -77,9 +87,11 @@ class Experiment:
         self.config = config
         self.bounds = config["bounds"].to(config["device"], dtype=config["dtype"])
         self.objective_function = config["objective_function"]
-        self.train_x, self.train_y = self.generate_initial_data(config["initial_points"])
+        self.train_x, self.train_y = self.generate_initial_data(
+            config["initial_points"]
+        )
         self.model = self.initialize_model(self.train_x, self.train_y)
-        self.best_values = []  
+        self.best_values = []
         self.best_x_values = []
 
         self.beta = config["algo_params"].get("beta", 2.0)
@@ -88,7 +100,11 @@ class Experiment:
         self.start_time = None  # 開始時間を保存するための属性を追加
 
     def generate_initial_data(self, n):
-        train_x = generate_integer_samples(self.bounds, n).float().to(self.bounds.device, dtype=self.bounds.dtype)
+        train_x = (
+            generate_integer_samples(self.bounds, n)
+            .float()
+            .to(self.bounds.device, dtype=self.bounds.dtype)
+        )
         train_y = self.objective_function(train_x).unsqueeze(-1)
         return train_x, train_y
 
@@ -122,24 +138,28 @@ class Experiment:
 
     def adjust_beta(self):
         def objective(params):
-            delta_beta = torch.tensor(params[0], device=self.bounds.device, dtype=self.bounds.dtype)
+            delta_beta = torch.tensor(
+                params[0], device=self.bounds.device, dtype=self.bounds.dtype
+            )
             adjusted_beta = self.beta + delta_beta.item()
             acq_function = self.acquisition_function(adjusted_beta)
             new_x = self.optimize_acquisition(acq_function)
             if new_x is None:
-                return float('inf')
+                return float("inf")
             rounded_new_x = torch.round(new_x)
 
-            penalty = float('inf')
+            penalty = float("inf")
             if (rounded_new_x == self.train_x).all(dim=1).any():
                 penalty = 1000
 
-            return delta_beta.item() + torch.norm(new_x - rounded_new_x).item() + penalty
+            return (
+                delta_beta.item() + torch.norm(new_x - rounded_new_x).item() + penalty
+            )
 
         initial_guess = [0.0]
         bounds = [(0.0, self.beta_h)]
 
-        result = minimize(objective, initial_guess, bounds=bounds, method='L-BFGS-B')
+        result = minimize(objective, initial_guess, bounds=bounds, method="L-BFGS-B")
         delta_beta = result.x[0]
         self.beta += delta_beta
 
@@ -158,12 +178,16 @@ class Experiment:
 
             elapsed_time = time.time() - self.start_time
             if self.time_budget and elapsed_time > self.time_budget:
-                logging.info(f"Stopping candidate search due to time limit during beta adjustment. Elapsed time: {elapsed_time:.2f} seconds")
-                print(f"Stopping candidate search due to time limit during beta adjustment. Elapsed time: {elapsed_time:.2f} seconds")
+                logging.info(
+                    f"Stopping candidate search due to time limit during beta adjustment. Elapsed time: {elapsed_time:.2f} seconds"
+                )
+                print(
+                    f"Stopping candidate search due to time limit during beta adjustment. Elapsed time: {elapsed_time:.2f} seconds"
+                )
                 return None
 
-            logging.info(f'Trying to get new candidate with beta = {self.beta}')
-            print(f'Trying to get new candidate with beta = {self.beta}')
+            logging.info(f"Trying to get new candidate with beta = {self.beta}")
+            print(f"Trying to get new candidate with beta = {self.beta}")
 
             self.adjust_beta()
             acq_function = self.acquisition_function(self.beta)
@@ -190,61 +214,76 @@ class Experiment:
             # 経過時間のチェック
             elapsed_time = time.time() - self.start_time
             if self.time_budget and elapsed_time > self.time_budget:
-                logging.info(f"Stopping optimization due to time limit. Elapsed time: {elapsed_time:.2f} seconds")
-                print(f"Stopping optimization due to time limit. Elapsed time: {elapsed_time:.2f} seconds")
+                logging.info(
+                    f"Stopping optimization due to time limit. Elapsed time: {elapsed_time:.2f} seconds"
+                )
+                print(
+                    f"Stopping optimization due to time limit. Elapsed time: {elapsed_time:.2f} seconds"
+                )
                 break
 
             fit_pytorch_model_with_constraint(
-                self.model, 
+                self.model,
                 self.bounds,
                 self.acquisition_function(self.beta),
                 num_epochs=1000,
-                learning_rate=0.01
+                learning_rate=0.01,
             )
-            
+
             new_x, new_y = self.optimize_acqf_and_get_observation()
             if new_x is None or new_y is None:
                 logging.info("Stopping optimization due to numerical issues.")
                 print("Stopping optimization due to numerical issues.")
                 break
-            
+
             self.train_x = torch.cat([self.train_x, new_x])
             self.train_y = torch.cat([self.train_y, new_y])
             self.model = self.initialize_model(self.train_x, self.train_y)
-            
+
             best_value = self.train_y.max().item()
             self.best_values.append(best_value)
             best_x = self.train_x[self.train_y.argmax()]
             self.best_x_values.append(best_x)
 
-            logging.info(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {best_x}, New x = {new_x}")
-            print(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {best_x}, New x = {new_x}")
+            logging.info(
+                f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {best_x}, New x = {new_x}"
+            )
+            print(
+                f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {best_x}, New x = {new_x}"
+            )
 
         logging.info("All done.")
         print("All done.")
 
     def save_results(self):
         # 実験結果のディレクトリを設定
-        date = current_time.split('_')[0]
+        date = current_time.split("_")[0]
         solver = "botorch"
         objective_function = "Griewank_3d"
         sampler_name = "strictly_constrained1"
 
-        results_dir = os.path.join(EXPT_RESULT_DIR, date, solver, objective_function, sampler_name)
+        results_dir = os.path.join(
+            EXPT_RESULT_DIR, date, solver, objective_function, sampler_name
+        )
         os.makedirs(results_dir, exist_ok=True)
 
         # CSVファイルに結果を保存
-        csv_filename = os.path.join(results_dir, f"experiment_results_{current_time}.csv")
-        with open(csv_filename, mode='w', newline='') as file:
+        csv_filename = os.path.join(
+            results_dir, f"experiment_results_{current_time}.csv"
+        )
+        with open(csv_filename, mode="w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(["iter", "best_x", "best_f", "train_x", "train_y"])
             for i, best_x, best_val, train_x, train_y in zip(
-                    range(1, len(self.best_x_values) + 1), 
-                    self.best_x_values, 
-                    self.best_values, 
-                    self.train_x, 
-                    self.train_y):
-                writer.writerow([i, best_x.tolist(), best_val, train_x.tolist(), train_y.item()])
+                range(1, len(self.best_x_values) + 1),
+                self.best_x_values,
+                self.best_values,
+                self.train_x,
+                self.train_y,
+            ):
+                writer.writerow(
+                    [i, best_x.tolist(), best_val, train_x.tolist(), train_y.item()]
+                )
         logging.info(f"Results saved to {csv_filename}")
         print(f"Results saved to {csv_filename}")
 
@@ -258,9 +297,9 @@ class Experiment:
 if __name__ == "__main__":
     import warnings
 
-    warnings.filterwarnings('ignore')
+    warnings.filterwarnings("ignore")
 
-    print(f'torch.cuda.is_available(): {torch.cuda.is_available()}')
+    print(f"torch.cuda.is_available(): {torch.cuda.is_available()}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.float
@@ -270,14 +309,21 @@ if __name__ == "__main__":
         f(x) = \sum_{i=1}^d \frac{x_i^2}{4000} - \prod_{i=1}^d \cos \left( \frac{x_i}{\sqrt{i}} \right) + 1
         """
         sum_term = torch.sum(X**2 / 4000, dim=1)
-        prod_term = torch.prod(torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float().to(X.device))), dim=1)
+        prod_term = torch.prod(
+            torch.cos(
+                X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float().to(X.device))
+            ),
+            dim=1,
+        )
         return sum_term - prod_term + 1
 
     objective_function = griewank_function
 
     experiment_config = {
         "initial_points": 5,
-        "bounds": torch.tensor([[-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]], device=device, dtype=dtype),
+        "bounds": torch.tensor(
+            [[-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]], device=device, dtype=dtype
+        ),
         "batch_size": 1,
         "num_restarts": 10,
         "raw_samples": 20,
@@ -289,7 +335,7 @@ if __name__ == "__main__":
             "beta_h": 10.0,
         },
         "device": device,
-        "dtype": dtype
+        "dtype": dtype,
     }
 
     experiment = Experiment(experiment_config)
