@@ -4,3 +4,5 @@ data/
 __pycache__/
 results/
 logs/
+logs-archive/
+retrieve.sh
