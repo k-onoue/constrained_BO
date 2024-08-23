@@ -177,8 +177,8 @@ if __name__ == "__main__":
     settings = {
         "name": name,
         "device": device,
-        "bo_iter": 10,
-        "initial_data_size": 10000,
+        "bo_iter": 10000,
+        "initial_data_size": 10,
         "model": {
             "hidden_unit_size": 64,
             "num_hidden_layers": 3,
