@@ -5,9 +5,6 @@ CPUS_PER_TASK=3  # Adjust the number of CPUs per task
 PARTITION="gpu_long"  # Partition name
 TIME="09:30:00"  # Maximum execution time
 
-# Activate the conda environment
-conda activate bo-env
-
 # Create results directory if it doesn't exist
 mkdir -p results/
 
@@ -32,27 +29,27 @@ cat $config_file
 
 # Run multiple Python files in parallel using sbatch
 sbatch --job-name=benchmark_${PARTITION} \
-       --output=results/output_constraint_%j.txt \
+       --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-22_botorch/Warcraft_3x4_3.py"
+       --wrap="python3 experiments/2024-08-23_botorch/Warcraft_3x4_3.py"
 
 # Run multiple Python files in parallel using sbatch
 sbatch --job-name=benchmark_${PARTITION} \
-       --output=results/output_constraint_%j.txt \
+       --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-22_botorch/Warcraft_3x4_4.py"
+       --wrap="python3 experiments/2024-08-23_botorch/Warcraft_3x4_4.py"
 
 # Run multiple Python files in parallel using sbatch
 sbatch --job-name=benchmark_${PARTITION} \
-       --output=results/output_constraint_%j.txt \
+       --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
-       --gpu-count=1 \
+       --gres=gpu:1 \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-22_botorch/Warcraft_3x4_5.py"
+       --wrap="python3 experiments/2024-08-23_botorch/Warcraft_3x4_5.py"
 
 
