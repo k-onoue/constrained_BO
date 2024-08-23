@@ -1,5 +1,6 @@
 import re
 
+import pandas as pd
 import torch
 
 
@@ -68,12 +69,151 @@ def negate_function(func):
     return negated_func
 
 
+class OptimLogParser:
+    def __init__(self, log_file):
+        self.log_file = log_file
+        self.settings = {}
+        self.initial_data = {
+            "candidate": [],
+            "function_value": [],
+            "final_training_loss": [],
+        }
+        self.bo_data = {
+            "iteration": [],
+            "candidate": [],
+            "acquisition_value": [],
+            "function_value": [],
+            "final_training_loss": [],
+            "iteration_time": [],
+        }
+
+    def combine_log_entries(self):
+        with open(self.log_file, "r") as file:
+            lines = file.readlines()
+
+        timestamp_pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - "
+
+        combined_lines = []
+        current_entry = ""
+
+        for line in lines:
+            if re.match(timestamp_pattern, line):
+                if current_entry:
+                    combined_lines.append(current_entry.strip())
+                current_entry = line.strip()
+            else:
+                current_entry += " " + line.strip()
+
+        if current_entry:
+            combined_lines.append(current_entry.strip())
+
+        return combined_lines
+
+    def parse_log_file(self):
+        combined_lines = self.combine_log_entries()
+
+        mode = None
+
+        for line in combined_lines:
+            if "Running optimization with settings:" in line:
+                mode = "settings"
+                self._parse_settings(line)
+            elif "Initial data points" in line:
+                mode = "init"
+            elif "Iteration" in line:
+                mode = "bo_loop"
+            elif "Optimization completed." in line:
+                break  # 終了条件
+
+            if mode == "init":
+                self._parse_init_data(line)
+            elif mode == "bo_loop":
+                self._parse_bo_data(line)
+
+        # Fill in the final training loss for the initial data
+        val = self.initial_data["final_training_loss"][-1]
+        length = len(self.initial_data["candidate"])
+        self.initial_data["final_training_loss"] = [val] * length
+
+        final_iter = self.bo_data["iteration"][-1] if self.bo_data["iteration"] else 0
+        for column in self.bo_data:
+            while len(self.bo_data[column]) < final_iter:
+                self.bo_data[column].append(None)
+
+        self.initial_data = pd.DataFrame(self.initial_data)
+        self.bo_data = pd.DataFrame(self.bo_data)
+
+    def _parse_settings(self, line):
+        settings_str = line.split("settings:")[1].strip()
+        settings_str = re.sub(r"device\(type='[^']+'\)", "'cpu'", settings_str)
+        settings_str = re.sub(r"device\(type=\"[^\"]+\"\)", "'cpu'", settings_str)
+        try:
+            self.settings = eval(settings_str)
+        except SyntaxError as e:
+            print(f"Failed to parse settings: {e}")
+            self.settings = {}
+
+    def _parse_init_data(self, line):
+        candidate_match = re.search(r"Candidate: (.*?) Function Value:", line)
+        function_value_match = re.search(r"Function Value: ([-+]?\d*\.\d+|\d+)", line)
+        final_training_loss_match = re.search(
+            r"Final training loss: ([-+]?\d*\.\d+|\d+)", line
+        )
+
+        if candidate_match:
+            self.initial_data["candidate"].append(candidate_match.group(1).strip())
+        if function_value_match:
+            self.initial_data["function_value"].append(
+                float(function_value_match.group(1))
+            )
+        if final_training_loss_match:
+            self.initial_data["final_training_loss"].append(
+                float(final_training_loss_match.group(1))
+            )
+
+    def _parse_bo_data(self, line):
+        iteration_match = re.search(r"Iteration (\d+)/", line)
+        candidate_match = re.search(r"Candidate: (\[.*?\])", line)
+        acquisition_value_match = re.search(
+            r"Acquisition Value: ([-+]?\d*\.\d+|\d+)", line
+        )
+        function_value_match = re.search(r"Function Value: ([-+]?\d*\.\d+|\d+)", line)
+        final_training_loss_match = re.search(
+            r"Final training loss: ([-+]?\d*\.\d+|\d+)", line
+        )
+        iteration_time_match = re.search(r"Iteration time: ([-+]?\d*\.\d+)", line)
+
+        if iteration_match:
+            self.bo_data["iteration"].append(int(iteration_match.group(1)))
+        if candidate_match:
+            self.bo_data["candidate"].append(candidate_match.group(1).strip())
+        if acquisition_value_match:
+            self.bo_data["acquisition_value"].append(
+                float(acquisition_value_match.group(1))
+            )
+        if function_value_match:
+            self.bo_data["function_value"].append(float(function_value_match.group(1)))
+        if final_training_loss_match:
+            self.bo_data["final_training_loss"].append(
+                float(final_training_loss_match.group(1))
+            )
+        if iteration_time_match:
+            self.bo_data["iteration_time"].append(float(iteration_time_match.group(1)))
+
+
 # if __name__ == "__main__":
-#     # テスト
-#     bounds = [[0, 0, 0, 0, 0, 0], [4, 5, 6, 7, 8, 9]]
-#     n = 10
-#     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     # samples = generate_integer_samples(bounds, n, device)
-#     # print(samples)
-#     samples = generate_integer_samples(bounds, n)
-#     print(samples)
+
+#     # log_file = "logs/2024-08-23_16-24-48_Warcraft_3x4_architecture-search_4.log"
+#     log_file = "/Users/keisukeonoue/ws/constrained_BO/logs/2024-08-23_22-28-52_Warcraft_3x4_unconstrained.log"
+
+#     parser = OptimLogParser(log_file)
+#     parser.parse_log_file()
+
+#     print("Experimental settings:")
+#     print(parser.settings)
+
+#     print("Initial data:")
+#     print(parser.initial_data)
+
+#     print("BO data:")
+#     print(parser.bo_data)
