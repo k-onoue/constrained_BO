@@ -159,3 +159,5 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01) -> None:
         loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
         loss.backward()
         optimizer.step()
+
+    return loss.item()
