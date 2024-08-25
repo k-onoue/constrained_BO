@@ -1,4 +1,8 @@
+import datetime
+import logging
+import os
 import re
+import sys
 
 import pandas as pd
 import torch
@@ -14,7 +18,8 @@ def extract_info_from_filename(filename):
     return None, None
 
 
-def generate_integer_samples(bounds, n, device=torch.device("cpu")):
+# def generate_integer_samples(bounds, n, device=torch.device("cpu"), framework="botorch"):
+def generate_integer_samples(bounds, n, device=torch.device("cpu"), dtype=torch.float32):
     """
     整数をランダムにサンプリングして、n 行 m 列の torch.Tensor を生成します。
     重複のない n サンプルが得られるまでサンプリングを繰り返します。
@@ -27,6 +32,12 @@ def generate_integer_samples(bounds, n, device=torch.device("cpu")):
     Returns:
     - torch.Tensor, n 行 m 列のテンソル
     """
+    # frameworks = ["botorch", "optuna"]
+    # if framework not in frameworks:
+    #     raise ValueError(f"Invalid framework: {framework}")
+    # elif framework == "botorch":
+    #     bounds = bounds.T
+
     lower_bounds = torch.tensor(bounds[0], device=device, dtype=torch.int)
     upper_bounds = torch.tensor(bounds[1], device=device, dtype=torch.int)
 
@@ -54,7 +65,7 @@ def generate_integer_samples(bounds, n, device=torch.device("cpu")):
         if len(samples) >= n:
             break
 
-    unique_samples = torch.tensor(list(samples)[:n], device=device)
+    unique_samples = torch.tensor(list(samples)[:n], device=device, dtype=dtype)
     return unique_samples
 
 
@@ -67,6 +78,23 @@ def negate_function(func):
         return -func(X)
 
     return negated_func
+
+
+def set_logger(log_filename_base, save_dir):
+    # ログの設定
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_filename = f"{current_time}_{log_filename_base}.log"
+    log_filepath = os.path.join(save_dir, log_filename)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler(log_filepath), logging.StreamHandler(sys.stdout)],
+    )
+
+
+def log_print(message):
+    print(message)
+    logging.info(message)
 
 
 class OptimLogParser:
