@@ -162,7 +162,7 @@ def run_bo(setting_dict):
             logging.info(f"Iteration {iteration + 1}/{n_iterations}")
             
             # ---------------------------------------------------------------------------------------------
-            # Step 4: Define the Acquisition Function
+            # Step 4: Define and optimize the Acquisition Function
             acq_optim_settings = setting_dict["acquisition_optim"]
             # ucb = UpperConfidenceBound(model, beta=beta)
 
@@ -177,13 +177,15 @@ def run_bo(setting_dict):
             candidate_flat = torch.round(candidate_flat).to(device)
             min_key, max_key = -10, 10
 
-            # ---------------------------------------------------------------------------------------------
-            # Step 5: Optimize the Acquisition Function
             candidate_flat = torch.clamp(candidate_flat, min=min_key, max=max_key)
             candidate = candidate_flat.squeeze(0)
             y_new = objective_function(candidate).to(device)
 
+            mean, covariance = model(candidate_flat)
+
             logging.info(f"Candidate: {candidate_flat.cpu().numpy()}")
+            logging.info(f"Suroggate Mean: {mean.item()}")
+            logging.info(f"Suroggate Covariance: {covariance.item()}")
             logging.info(f"Acquisition Value: {acq_value.item()}")
             logging.info(f"Function Value: {y_new.item()}")
 
@@ -241,7 +243,7 @@ if __name__ == "__main__":
     settings = {
         "name": name,
         "device": device,
-        "bo_iter": 1000,
+        "bo_iter": 10,
         "initial_data_size": 10,
         "model": {
             "hidden_unit_size": 64,
