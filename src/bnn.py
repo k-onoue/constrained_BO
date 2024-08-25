@@ -98,7 +98,7 @@ class BayesianMLPModel(Model):
         num_hidden_layers: int = 3,
         min_val: float = None,
         max_val: float = None,
-        clipping: float = False,
+        clipping: bool = False,
     ) -> None:
         super().__init__()
         self.bayesian_mlp = BayesianMLP(
