@@ -130,6 +130,7 @@ def run_bo(setting_dict):
             y_train,
             hidden_unit_size=model_settings["hidden_unit_size"],
             num_hidden_layers=model_settings["num_hidden_layers"],
+            clipping=True
         ).to(device)
 
         acq_optim_settings = setting_dict["acquisition_optim"]
@@ -240,7 +241,7 @@ if __name__ == "__main__":
     settings = {
         "name": name,
         "device": device,
-        "bo_iter": 10,
+        "bo_iter": 1000,
         "initial_data_size": 10,
         "model": {
             "hidden_unit_size": 64,
@@ -255,7 +256,7 @@ if __name__ == "__main__":
             "num_restarts": 5,
             "raw_samples": 20,
         },
-        "memo": "",
+        "memo": "try clipping for numarical stability",
     }
 
     set_logger(settings["name"], LOG_DIR)

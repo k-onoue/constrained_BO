@@ -93,6 +93,9 @@ def set_logger(log_filename_base, save_dir):
 
 
 def log_print(message):
+    """
+    計算サーバ用のログ出力関数
+    """
     print(message)
     logging.info(message)
 

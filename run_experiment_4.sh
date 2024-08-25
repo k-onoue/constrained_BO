@@ -2,8 +2,8 @@
 
 # Resource configuration
 CPUS_PER_TASK=4  # Adjust the number of CPUs per task
-PARTITION="gpu_long"  # Partition name
-TIME="10:00:00"  # Maximum execution time
+PARTITION="gpu_short"  # Partition name
+TIME="4:00:00"  # Maximum execution time
 
 # Create results directory if it doesn't exist
 mkdir -p results/
@@ -33,5 +33,5 @@ sbatch --job-name=benchmark_${PARTITION} \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-25_v2_botorch/Warcraft_3x4_constrained1.py"
+       --wrap="python3 experiments/2024-08-25_v2_botorch/Simple_5d_constrained2.py"
        
