@@ -6,3 +6,4 @@ results/
 logs/
 logs-archive/
 retrieve.sh
+retrieve_double.sh
