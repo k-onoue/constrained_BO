@@ -246,7 +246,7 @@ if __name__ == "__main__":
         "name": name,
         "device": device,
         "bo_iter": 10,
-        "initial_data_size": 10,
+        "initial_data_size": 1000,
         "model": {
             "hidden_unit_size": 64,
             "num_hidden_layers": 3,
