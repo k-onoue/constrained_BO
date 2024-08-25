@@ -181,7 +181,9 @@ def run_bo(setting_dict):
             candidate = candidate_flat.squeeze(0)
             y_new = objective_function(candidate).to(device)
 
-            mean, covariance = model(candidate_flat)
+            pred_dist = model(candidate_flat)
+            mean = pred_dist.mean
+            covariance = pred_dist.variance
 
             logging.info(f"Candidate: {candidate_flat.cpu().numpy()}")
             logging.info(f"Suroggate Mean: {mean.item()}")
