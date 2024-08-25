@@ -33,5 +33,5 @@ sbatch --job-name=benchmark_${PARTITION} \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-25_v2_botorch/Simple_5d_constrained4.py"
+       --wrap="python3 experiments/2024-08-25_botorch/Simple_5d_constrained4.py"
        
