@@ -133,7 +133,7 @@ def run_bo(setting_dict):
             y_train,
             hidden_unit_size=model_settings["hidden_unit_size"],
             num_hidden_layers=model_settings["num_hidden_layers"],
-            # clipping=True
+            clipping=True
         ).to(device)
 
         acq_optim_settings = setting_dict["acquisition_optim"]

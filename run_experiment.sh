@@ -34,5 +34,13 @@ sbatch --job-name=benchmark_${PARTITION} \
        --gres=gpu:1 \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-27_botorch/Simple_5d_constrained_normalized-input.py.py"
+       --wrap="python3 experiments/2024-08-27_botorch/Simple_5d_constrained_normalized-input_2.py"
        
+# Run multiple Python files in parallel using sbatch
+sbatch --job-name=benchmark_${PARTITION} \
+       --output=results/output_%j.txt \
+       --cpus-per-task=$CPUS_PER_TASK \
+       --gres=gpu:1 \
+       --partition=$PARTITION \
+       --time=$TIME \
+       --wrap="python3 experiments/2024-08-27_botorch/Simple_5d_constrained2_normalized-input.py"

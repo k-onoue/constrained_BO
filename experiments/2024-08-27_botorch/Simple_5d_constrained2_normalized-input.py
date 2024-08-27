@@ -58,7 +58,7 @@ def fit_pytorch_model_with_constraint(
     model.train()
 
     lambda1 = torch.tensor(
-        0.5, device=model.train_inputs.device, dtype=model.train_inputs.dtype
+        0, device=model.train_inputs.device, dtype=model.train_inputs.dtype
     )
     lambda2 = 1 - lambda1
 
