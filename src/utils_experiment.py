@@ -10,6 +10,7 @@ import torch
 
 def extract_info_from_filename(filename):
     # Extract date and objective function from the filename
+    # No more used
     match = re.match(r".*(\d{4}-\d{2}-\d{2})_(\w+)_v\d+\.py", filename)
     if match:
         date = match.group(1)
@@ -19,7 +20,9 @@ def extract_info_from_filename(filename):
 
 
 # def generate_integer_samples(bounds, n, device=torch.device("cpu"), framework="botorch"):
-def generate_integer_samples(bounds, n, device=torch.device("cpu"), dtype=torch.float32):
+def generate_integer_samples(
+    bounds, n, device=torch.device("cpu"), dtype=torch.float32
+):
     """
     整数をランダムにサンプリングして、n 行 m 列の torch.Tensor を生成します。
     重複のない n サンプルが得られるまでサンプリングを繰り返します。
@@ -98,6 +101,26 @@ def log_print(message):
     """
     print(message)
     logging.info(message)
+
+
+def search_log_files(
+    log_dir: str, keywords: list[str], logic: str = "and"
+) -> list[str]:
+    if logic not in ["or", "and"]:
+        raise ValueError("The logic parameter must be 'or' or 'and'.")
+
+    res_files = sorted(os.listdir(log_dir))
+
+    if logic == "and":
+        res_files_filtered = [
+            f for f in res_files if all(keyword in f for keyword in keywords)
+        ]
+    elif logic == "or":
+        res_files_filtered = [
+            f for f in res_files if any(keyword in f for keyword in keywords)
+        ]
+
+    return res_files_filtered
 
 
 class OptimLogParser:

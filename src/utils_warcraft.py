@@ -1,3 +1,6 @@
+import torch
+
+
 def get_opposite(direction: str) -> str:
     """
     Examples
@@ -97,3 +100,15 @@ def manhattan_distance(coord1: tuple[int, int], coord2: tuple[int, int]) -> int:
     6
     """
     return abs(coord1[0] - coord2[0]) + abs(coord1[1] - coord2[1])
+
+
+def generate_initial_data(
+    objective_function: callable,
+    dataset_size: int,
+    shape: tuple[int, int],
+) -> torch.tensor:
+    values = torch.tensor([-3, -2, -1, 0, 1, 2, 3])
+    n, m = shape
+    X_train = values[torch.randint(0, len(values), (dataset_size, n, m))]
+    y_train = torch.stack([objective_function(x) for x in X_train]).unsqueeze(-1)
+    return X_train, y_train
