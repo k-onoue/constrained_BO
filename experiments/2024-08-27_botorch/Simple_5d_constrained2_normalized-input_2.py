@@ -42,10 +42,6 @@ def fit_pytorch_model_with_constraint(model, acqf, num_epochs=1000, learning_rat
         X1 = X[:, 0]
         X2 = X[:, 1]
 
-        print(
-            f"Logical Constraints: {(X1 == X2).float().unsqueeze(1).sum()} / {X1.size(0)}"
-        )
-
         return (X1 == X2).float().unsqueeze(1)
 
     # def g(X):
