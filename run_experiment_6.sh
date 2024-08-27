@@ -31,7 +31,7 @@ cat $config_file
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
-       --gres=gpu:1 \  # Requesting all 8 GPUs
+       --gres=gpu:8 \
        --partition=$PARTITION \
        --time=$TIME \
        --wrap="python3 experiments/2024-08-27_botorch/Simple_5d_constrained3_normalized-input.py"
