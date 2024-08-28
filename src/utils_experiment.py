@@ -123,6 +123,138 @@ def search_log_files(
     return res_files_filtered
 
 
+class OptimLogParser_v1:
+    def __init__(self, log_file):
+        self.log_file = log_file
+        self.settings = {}
+        self.initial_data = {
+            "candidate": [],
+            "function_value": [],
+            "final_training_loss": [],
+        }
+        self.bo_data = {
+            "iteration": [],
+            "candidate": [],
+            "acquisition_value": [],
+            "function_value": [],
+            "final_training_loss": [],
+            "iteration_time": [],
+        }
+
+    def combine_log_entries(self):
+        with open(self.log_file, "r") as file:
+            lines = file.readlines()
+
+        timestamp_pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - "
+
+        combined_lines = []
+        current_entry = ""
+
+        for line in lines:
+            if re.match(timestamp_pattern, line):
+                if current_entry:
+                    combined_lines.append(current_entry.strip())
+                current_entry = line.strip()
+            else:
+                current_entry += " " + line.strip()
+
+        if current_entry:
+            combined_lines.append(current_entry.strip())
+
+        return combined_lines
+
+    def parse_log_file(self):
+        combined_lines = self.combine_log_entries()
+
+        mode = None
+
+        for line in combined_lines:
+            if "Running optimization with settings:" in line:
+                mode = "settings"
+                self._parse_settings(line)
+            elif "Initial data points" in line:
+                mode = "init"
+            elif "Iteration" in line:
+                mode = "bo_loop"
+            elif "Optimization completed." in line:
+                break  
+
+            if mode == "init":
+                self._parse_init_data(line)
+            elif mode == "bo_loop":
+                self._parse_bo_data(line)
+
+        # Fill in the final training loss for the initial data
+        val = self.initial_data["final_training_loss"][-1]
+        length = len(self.initial_data["candidate"])
+        self.initial_data["final_training_loss"] = [val] * length
+
+        final_iter = self.bo_data["iteration"][-1] if self.bo_data["iteration"] else 0
+        for column in self.bo_data:
+            while len(self.bo_data[column]) < final_iter:
+                self.bo_data[column].append(None)
+
+        self.initial_data = pd.DataFrame(self.initial_data)
+        self.bo_data = pd.DataFrame(self.bo_data)
+
+    def _parse_settings(self, line):
+        settings_str = line.split("settings:")[1].strip()
+        settings_str = re.sub(r"device\(type='[^']+'\)", "'cpu'", settings_str)
+        settings_str = re.sub(r"device\(type=\"[^\"]+\"\)", "'cpu'", settings_str)
+        try:
+            self.settings = eval(settings_str)
+        except SyntaxError as e:
+            print(f"Failed to parse settings: {e}")
+            self.settings = {}
+
+    def _parse_init_data(self, line):
+        candidate_match = re.search(r"Candidate: (.*?) Function Value:", line)
+        function_value_match = re.search(r"Function Value: ([-+]?\d*\.\d+|\d+)", line)
+        final_training_loss_match = re.search(
+            r"Final training loss: ([-+]?\d*\.\d+|\d+)", line
+        )
+
+        if candidate_match:
+            self.initial_data["candidate"].append(candidate_match.group(1).strip())
+        if function_value_match:
+            self.initial_data["function_value"].append(
+                float(function_value_match.group(1))
+            )
+        if final_training_loss_match:
+            self.initial_data["final_training_loss"].append(
+                float(final_training_loss_match.group(1))
+            )
+
+    def _parse_bo_data(self, line):
+        iteration_match = re.search(r"Iteration (\d+)/", line)
+        candidate_match = re.search(r"Candidate: (\[.*?\])", line)
+        acquisition_value_match = re.search(
+            r"Acquisition Value: ([-+]?\d*\.\d+|\d+)", line
+        )
+        function_value_match = re.search(r"Function Value: ([-+]?\d*\.\d+|\d+)", line)
+        final_training_loss_match = re.search(
+            r"Final training loss: ([-+]?\d*\.\d+|\d+)", line
+        )
+        iteration_time_match = re.search(r"Iteration time: ([-+]?\d*\.\d+)", line)
+
+        if iteration_match:
+            self.bo_data["iteration"].append(int(iteration_match.group(1)))
+        if candidate_match:
+            self.bo_data["candidate"].append(candidate_match.group(1).strip())
+        if acquisition_value_match:
+            self.bo_data["acquisition_value"].append(
+                float(acquisition_value_match.group(1))
+            )
+        if function_value_match:
+            self.bo_data["function_value"].append(float(function_value_match.group(1)))
+        if final_training_loss_match:
+            self.bo_data["final_training_loss"].append(
+                float(final_training_loss_match.group(1))
+            )
+        if iteration_time_match:
+            self.bo_data["iteration_time"].append(float(iteration_time_match.group(1)))
+
+
 class OptimLogParser:
     def __init__(self, log_file):
         self.log_file = log_file
@@ -208,18 +340,22 @@ class OptimLogParser:
             self.settings = {}
 
     def _parse_init_data(self, line):
-        candidate_match = re.search(r"Candidate: (.*?) Function Value:", line)
+        candidate_match = re.search(r"Candidate: (\[.*?\])", line)
         function_value_match = re.search(r"Function Value: ([-+]?\d*\.\d+|\d+)", line)
         final_training_loss_match = re.search(
             r"Final training loss: ([-+]?\d*\.\d+|\d+)", line
         )
 
         if candidate_match:
-            self.initial_data["candidate"].append(candidate_match.group(1).strip())
+            candidate = candidate_match.group(1).strip()
+            self.initial_data["candidate"].append(candidate)
+
         if function_value_match:
-            self.initial_data["function_value"].append(
-                float(function_value_match.group(1))
-            )
+            function_value = float(function_value_match.group(1))
+            # Ensure we have a candidate entry before appending the function value
+            if len(self.initial_data["candidate"]) > len(self.initial_data["function_value"]):
+                self.initial_data["function_value"].append(function_value)
+
         if final_training_loss_match:
             self.initial_data["final_training_loss"].append(
                 float(final_training_loss_match.group(1))
@@ -236,6 +372,8 @@ class OptimLogParser:
             r"Final training loss: ([-+]?\d*\.\d+|\d+)", line
         )
         iteration_time_match = re.search(r"Iteration time: ([-+]?\d*\.\d+)", line)
+        surrogate_mean_match = re.search(r"Suroggate Mean: ([-+]?\d*\.\d+|\d+)", line)
+        surrogate_covariance_match = re.search(r"Suroggate Covariance: ([-+]?\d*\.\d+|\d+)", line)
 
         if iteration_match:
             self.bo_data["iteration"].append(int(iteration_match.group(1)))
@@ -253,6 +391,15 @@ class OptimLogParser:
             )
         if iteration_time_match:
             self.bo_data["iteration_time"].append(float(iteration_time_match.group(1)))
+        if surrogate_mean_match:
+            if "surrogate_mean" not in self.bo_data:
+                self.bo_data["surrogate_mean"] = []
+            self.bo_data["surrogate_mean"].append(float(surrogate_mean_match.group(1)))
+        if surrogate_covariance_match:
+            if "surrogate_covariance" not in self.bo_data:
+                self.bo_data["surrogate_covariance"] = []
+            self.bo_data["surrogate_covariance"].append(float(surrogate_covariance_match.group(1)))
+
 
 
 # if __name__ == "__main__":
