@@ -21,7 +21,7 @@ sys.path.append(PROJECT_DIR)
 
 from src.bnn import BayesianMLPModel
 
-# from src.bnn import fit_pytorch_model
+from src.bnn import fit_pytorch_model
 # from src.objectives_botorch import WarcraftObjectiveBoTorch
 # from src.objectives_botorch import generate_initial_data
 from src.utils_experiment import negate_function
@@ -34,64 +34,64 @@ import logging
 from src.utils_experiment import set_logger
 
 
-def fit_pytorch_model_with_constraint(model, acqf, num_epochs=1000, learning_rate=0.01):
-    def g(X):
-        """
-        制約：x1 == x2
-        """
-        X1 = X[:, 0]
-        X2 = X[:, 1]
+# def fit_pytorch_model_with_constraint(model, acqf, num_epochs=1000, learning_rate=0.01):
+#     def g(X):
+#         """
+#         制約：x1 == x2
+#         """
+#         X1 = X[:, 0]
+#         X2 = X[:, 1]
 
-        return (X1 == X2).float().unsqueeze(1)
+#         return (X1 == X2).float().unsqueeze(1)
 
-    # def g(X):
-    #     constraint1 = X[:, 5] == -3.
-    #     constraint2 = X[:, 3] == -3.
-    #     constraint = constraint1 & constraint2
-    #     return constraint.float().unsqueeze(1)
+#     # def g(X):
+#     #     constraint1 = X[:, 5] == -3.
+#     #     constraint2 = X[:, 3] == -3.
+#     #     constraint = constraint1 & constraint2
+#     #     return constraint.float().unsqueeze(1)
 
-    # def g(X):
-    #     constraint = X[:, 5] == -3.
-    #     return constraint.float().unsqueeze(1)
+#     # def g(X):
+#     #     constraint = X[:, 5] == -3.
+#     #     return constraint.float().unsqueeze(1)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    model.train()
+#     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+#     model.train()
 
-    lambda1 = torch.tensor(
-        0, device=model.train_inputs.device, dtype=model.train_inputs.dtype
-    )
-    lambda2 = 1 - lambda1
+#     lambda1 = torch.tensor(
+#         0, device=model.train_inputs.device, dtype=model.train_inputs.dtype
+#     )
+#     lambda2 = 1 - lambda1
 
-    X = model.train_inputs
-    y = model.train_targets
-    m = y.size(0)
-    f = model
+#     X = model.train_inputs
+#     y = model.train_targets
+#     m = y.size(0)
+#     f = model
 
-    for _ in range(num_epochs):
-        optimizer.zero_grad()
+#     for _ in range(num_epochs):
+#         optimizer.zero_grad()
 
-        # ---------------------------------------------------------------------------------------------
-        # unconstrained 
-        g_eval = torch.ones_like(y)
+#         # ---------------------------------------------------------------------------------------------
+#         # unconstrained 
+#         g_eval = torch.ones_like(y)
 
-        acqf_eval = []
-        for x in X:
-            x = x.unsqueeze(1).reshape(1, -1).to(X.device, dtype=X.dtype)
-            acqf_eval.append(acqf(x))
-        acqf_eval = torch.stack(acqf_eval).reshape(-1, 1)
+#         acqf_eval = []
+#         for x in X:
+#             x = x.unsqueeze(1).reshape(1, -1).to(X.device, dtype=X.dtype)
+#             acqf_eval.append(acqf(x))
+#         acqf_eval = torch.stack(acqf_eval).reshape(-1, 1)
 
-        ones = torch.ones_like(g_eval)
+#         ones = torch.ones_like(g_eval)
 
-        loss = (
-            lambda1 * (ones - g_eval).T * (-1) @ acqf_eval
-            + lambda2 * (-f(X).log_prob(y).T @ g_eval)
-        ).sum() / m
+#         loss = (
+#             lambda1 * (ones - g_eval).T * (-1) @ acqf_eval
+#             + lambda2 * (-f(X).log_prob(y).T @ g_eval)
+#         ).sum() / m
 
-        loss.backward()
-        nn_utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        optimizer.step()
+#         loss.backward()
+#         nn_utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+#         optimizer.step()
 
-    return loss.item()
+#     return loss.item()
 
 
 def run_bo(setting_dict):
@@ -147,9 +147,8 @@ def run_bo(setting_dict):
         ucb = UpperConfidenceBound(model, beta=beta)
         model_optim_settings = setting_dict["model_optim"]
 
-        final_loss = fit_pytorch_model_with_constraint(
+        final_loss = fit_pytorch_model(
             model,
-            ucb,
             num_epochs=model_optim_settings["num_epochs"],
             learning_rate=model_optim_settings["learning_rate"],
         )
@@ -203,9 +202,8 @@ def run_bo(setting_dict):
             X_train_normalized = trans.normalize(X_train)
 
             model.set_train_data(X_train_normalized, y_train)
-            final_loss = fit_pytorch_model_with_constraint(
+            final_loss = fit_pytorch_model(
                 model,
-                ucb,
                 num_epochs=model_optim_settings["num_epochs"],
                 learning_rate=model_optim_settings["learning_rate"],
             )
@@ -243,14 +241,14 @@ if __name__ == "__main__":
     settings = {
         "name": name,
         "device": device,
-        "bo_iter": 1000,
+        "bo_iter": 10000,
         "initial_data_size": 10,
         "model": {
             "hidden_unit_size": 64,
             "num_hidden_layers": 3,
         },
         "model_optim": {
-            "num_epochs": 10000,
+            "num_epochs": 100,
             "learning_rate": 0.01,
         },
         "acquisition_optim": {
@@ -258,7 +256,7 @@ if __name__ == "__main__":
             "num_restarts": 5,
             "raw_samples": 20,
         },
-        "memo": "increase the epoch from 1000 to 10000",
+        "memo": "decrease the epoch from 1000 to 100",
     }
 
     set_logger(settings["name"], LOG_DIR)

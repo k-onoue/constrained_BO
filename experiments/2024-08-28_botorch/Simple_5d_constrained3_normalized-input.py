@@ -255,7 +255,7 @@ if __name__ == "__main__":
             "num_hidden_layers": 3,
         },
         "model_optim": {
-            "num_epochs": 10000,
+            "num_epochs": 100,
             "learning_rate": 0.01,
         },
         "acquisition_optim": {
@@ -263,7 +263,7 @@ if __name__ == "__main__":
             "num_restarts": 5,
             "raw_samples": 20,
         },
-        "memo": "increase the epoch from 1000 to 10000",
+        "memo": "decrease the epoch from 1000 to 100",
     }
 
     set_logger(settings["name"], LOG_DIR)
