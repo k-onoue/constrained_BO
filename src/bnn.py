@@ -49,18 +49,30 @@ class BayesianMLP(nn.Module):
         input_dim: int,
         hidden_unit_size: int = 64,
         num_hidden_layers: int = 3,
+        activation_fn: nn.Module = nn.ReLU(),
         min_val: float = None,
         max_val: float = None,
         clipping: bool = False,
     ) -> None:
         super(BayesianMLP, self).__init__()
+
+        # Handle both single activation function and list of functions
+        if isinstance(activation_fn, list):
+            assert len(activation_fn) == num_hidden_layers, (
+                f"Number of activation functions ({len(activation_fn)}) does not match "
+                f"the number of hidden layers ({num_hidden_layers})."
+            )
+            activations = activation_fn
+        else:
+            activations = [activation_fn] * num_hidden_layers
+
         layers = []
         layers.append(nn.Linear(input_dim, hidden_unit_size))
-        layers.append(nn.ReLU())
+        layers.append(activations[0])
 
-        for _ in range(num_hidden_layers - 1):
+        for i in range(1, num_hidden_layers):
             layers.append(nn.Linear(hidden_unit_size, hidden_unit_size))
-            layers.append(nn.ReLU())
+            layers.append(activations[i])
 
         self.hidden_layers = nn.Sequential(*layers)
         self.bayesian_output = BayesianLinearRegression(hidden_unit_size, 1)
@@ -96,6 +108,7 @@ class BayesianMLPModel(Model):
         train_Y: torch.Tensor,
         hidden_unit_size: int = 64,
         num_hidden_layers: int = 3,
+        activation_fn: nn.Module = nn.ReLU(),
         min_val: float = None,
         max_val: float = None,
         clipping: bool = False,
@@ -105,6 +118,7 @@ class BayesianMLPModel(Model):
             input_dim=train_X.shape[1],
             hidden_unit_size=hidden_unit_size,
             num_hidden_layers=num_hidden_layers,
+            activation_fn=activation_fn,
             min_val=min_val,
             max_val=max_val,
             clipping=clipping,
@@ -147,6 +161,20 @@ class BayesianMLPModel(Model):
     ) -> None:
         self._train_inputs = inputs
         self._train_targets = targets
+
+
+# Function to train the model with GPU support
+def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01) -> None:
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    model.train()
+    for epoch in range(num_epochs):
+        # print(f"epoch: {epoch}")
+        optimizer.zero_grad()
+        loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
+        loss.backward()
+        optimizer.step()
+
+    return loss.item()
 
 
 # Function to train the model with GPU support
