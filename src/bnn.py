@@ -175,17 +175,3 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01) -> None:
         optimizer.step()
 
     return loss.item()
-
-
-# Function to train the model with GPU support
-def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01) -> None:
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    model.train()
-    for epoch in range(num_epochs):
-        # print(f"epoch: {epoch}")
-        optimizer.zero_grad()
-        loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
-        loss.backward()
-        optimizer.step()
-
-    return loss.item()
