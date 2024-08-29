@@ -33,7 +33,7 @@ sbatch --job-name=benchmark_${PARTITION} \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-28_botorch/Simple_5d_constrained3_normalized-input.py"
+       --wrap="python3 experiments/2024-08-28_botorch/Simple_5d_constrained3_tanh.py"
        
 # Run multiple Python files in parallel using sbatch
 sbatch --job-name=benchmark_${PARTITION} \
@@ -41,4 +41,4 @@ sbatch --job-name=benchmark_${PARTITION} \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-08-28_botorch/Simple_5d_unconstrained_normalized-input.py"
+       --wrap="python3 experiments/2024-08-28_botorch/Simple_5d_unconstrained_tanh.py"
