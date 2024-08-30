@@ -19,70 +19,6 @@ def extract_info_from_filename(filename):
     return None, None
 
 
-# def generate_integer_samples(bounds, n, device=torch.device("cpu"), framework="botorch"):
-def generate_integer_samples(
-    bounds, n, device=torch.device("cpu"), dtype=torch.float32
-):
-    """
-    整数をランダムにサンプリングして、n 行 m 列の torch.Tensor を生成します。
-    重複のない n サンプルが得られるまでサンプリングを繰り返します。
-
-    Parameters:
-    - bounds: list of list, 変数の下限と上限のリスト
-    - n: int, サンプル数
-    - device: torch.device, テンソルを配置するデバイス
-
-    Returns:
-    - torch.Tensor, n 行 m 列のテンソル
-    """
-    # frameworks = ["botorch", "optuna"]
-    # if framework not in frameworks:
-    #     raise ValueError(f"Invalid framework: {framework}")
-    # elif framework == "botorch":
-    #     bounds = bounds.T
-
-    lower_bounds = torch.tensor(bounds[0], device=device, dtype=torch.int)
-    upper_bounds = torch.tensor(bounds[1], device=device, dtype=torch.int)
-
-    m = lower_bounds.shape[0]
-    samples = set()
-
-    while len(samples) < n:
-        new_samples = []
-        for _ in range(n):
-            sample = []
-            for i in range(m):
-                sample.append(
-                    torch.randint(
-                        low=lower_bounds[i].item(),
-                        high=upper_bounds[i].item() + 1,
-                        size=(1,),
-                        device=device,
-                    ).item()
-                )
-            new_samples.append(tuple(sample))
-
-        for sample in new_samples:
-            samples.add(sample)
-
-        if len(samples) >= n:
-            break
-
-    unique_samples = torch.tensor(list(samples)[:n], device=device, dtype=dtype)
-    return unique_samples
-
-
-def negate_function(func):
-    """
-    目的関数の符号を反転させる
-    """
-
-    def negated_func(X):
-        return -func(X)
-
-    return negated_func
-
-
 def set_logger(log_filename_base, save_dir):
     # ログの設定
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -254,7 +190,7 @@ class OptimLogParser_v1:
         if iteration_time_match:
             self.bo_data["iteration_time"].append(float(iteration_time_match.group(1)))
 
-from torch.nn import Tanh
+
 class OptimLogParser:
     def __init__(self, log_file):
         self.log_file = log_file
@@ -330,6 +266,7 @@ class OptimLogParser:
         self.bo_data = pd.DataFrame(self.bo_data)
 
     def _parse_settings(self, line):
+        from torch.nn import Tanh, ReLU
         settings_str = line.split("settings:")[1].strip()
         settings_str = re.sub(r"device\(type='[^']+'\)", "'cpu'", settings_str)
         settings_str = re.sub(r"device\(type=\"[^\"]+\"\)", "'cpu'", settings_str)

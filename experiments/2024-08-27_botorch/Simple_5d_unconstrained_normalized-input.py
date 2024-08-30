@@ -26,7 +26,7 @@ from src.bnn import BayesianMLPModel
 # from src.objectives_botorch import generate_initial_data
 from src.utils_experiment import negate_function
 from src.utils_experiment import generate_integer_samples
-from src.input_trasformation import InputTransformer
+from utils_bo import InputTransformer
 
 import logging
 
