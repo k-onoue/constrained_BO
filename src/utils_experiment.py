@@ -254,7 +254,7 @@ class OptimLogParser_v1:
         if iteration_time_match:
             self.bo_data["iteration_time"].append(float(iteration_time_match.group(1)))
 
-
+from torch.nn import Tanh
 class OptimLogParser:
     def __init__(self, log_file):
         self.log_file = log_file

@@ -51,7 +51,11 @@ def run_bo(setting_dict):
 
         search_space = torch.tensor([[-10] * 5, [10] * 5]).to(torch.float32).to(device)
 
-        trans = InputTransformer(search_space)
+        trans = InputTransformer(
+            search_space,
+            lower_bound=0,
+            upper_bound=1
+        )
 
         # ---------------------------------------------------------------------------------------------
         # Step 2: Generate Initial Data
@@ -109,9 +113,8 @@ def run_bo(setting_dict):
             # ---------------------------------------------------------------------------------------------
             # Step 4: Define and optimize the Acquisition Function
             acq_optim_settings = setting_dict["acquisition_optim"]
-
             ucb = UpperConfidenceBound(model, beta=beta)
-            candidate_normaliezed, acq_value = optimize_acqf(
+            candidate, acq_value = optimize_acqf(
                 acq_function=ucb,
                 bounds=search_space,
                 q=1,
@@ -119,14 +122,14 @@ def run_bo(setting_dict):
                 raw_samples=acq_optim_settings["raw_samples"],
             )
 
-            candidate = trans.denormalize(candidate_normaliezed)
             candidate = trans.discretize(candidate)
             candidate = trans.clipping(candidate)
             candidate = candidate.squeeze(0)
 
             y_new = objective_function(candidate).to(device)
 
-            pred_dist = model(candidate)
+            candidate_normaliezed = trans.normalize(candidate.unsqueeze(0))
+            pred_dist = model(candidate_normaliezed)
             mean = pred_dist.mean
             covariance = pred_dist.variance
 
@@ -184,15 +187,15 @@ if __name__ == "__main__":
         "name": name,
         "device": device,
         "bo_iter": 10000,
-        "initial_data_size": 10,
+        "initial_data_size": 1,
         "model": {
             "hidden_unit_size": 64,
             "num_hidden_layers": 3,
             "activation_fn": torch.nn.Tanh(),
         },
         "model_optim": {
-            "num_epochs": 1000,
-            "learning_rate": 0.01,
+            "num_epochs": 100,
+            "learning_rate": 0.001,
         },
         "acquisition_optim": {
             "beta": 0.1,

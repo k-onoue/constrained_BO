@@ -34,6 +34,61 @@ import logging
 from src.utils_experiment import set_logger
 
 
+def fit_pytorch_model_with_constraint(model, acqf, num_epochs=1000, learning_rate=0.01):
+    def g(X):
+        """
+        制約：x1 == x2
+        """
+        X1 = X[:, 0]
+        X2 = X[:, 1]
+
+        return (X1 == X2).float().unsqueeze(1)
+
+    # def g(X):
+    #     constraint1 = X[:, 5] == -3.
+    #     constraint2 = X[:, 3] == -3.
+    #     constraint = constraint1 & constraint2
+    #     return constraint.float().unsqueeze(1)
+
+    # def g(X):
+    #     constraint = X[:, 5] == -3.
+    #     return constraint.float().unsqueeze(1)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    model.train()
+
+    lambda1 = torch.tensor(
+        0.5, device=model.train_inputs.device, dtype=model.train_inputs.dtype
+    )
+    lambda2 = 1 - lambda1
+
+    X = model.train_inputs
+    y = model.train_targets
+    m = y.size(0)
+    f = model
+
+    for _ in range(num_epochs):
+        optimizer.zero_grad()
+
+        g_eval = g(X)
+
+        loss = (
+            lambda2 * -f(X).log_prob(y).T @ g_eval
+        )
+
+        # print(f"g_eval: {g_eval.shape}")
+        # print(f"acqf_eval: {acqf_eval.shape}")
+        # print(f"f(X): {f(X).log_prob(y).shape}")
+        # print(f"f(X): {f(X).log_prob(y[:2]).shape}")
+        
+        loss = loss.sum() / m
+
+        loss.backward()
+        nn_utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        optimizer.step()
+
+    return loss.item()
+
 
 def run_bo(setting_dict):
     try:
@@ -51,7 +106,7 @@ def run_bo(setting_dict):
 
         search_space = torch.tensor([[-10] * 5, [10] * 5]).to(torch.float32).to(device)
 
-        trans = InputTransformer(search_space)
+        # trans = InputTransformer(search_space)
 
         # ---------------------------------------------------------------------------------------------
         # Step 2: Generate Initial Data
@@ -67,15 +122,15 @@ def run_bo(setting_dict):
             logging.info(f"Function Value: {y_train[i].item()}")
 
         # Flatten X_train and move it to the correct device
-        n_samples = X_train.shape[0]
-        X_train_normalized = trans.normalize(X_train)
-        y_train = y_train.to(device)
+        # n_samples = X_train.shape[0]
+        # X_train_normalized = trans.normalize(X_train)
+        # y_train = y_train.to(device)
 
         # ---------------------------------------------------------------------------------------------
         # Step 3: Train the Bayesian MLP Model
         model_settings = setting_dict["model"]
         model = BayesianMLPModel(
-            X_train_normalized,
+            X_train,
             y_train,
             hidden_unit_size=model_settings["hidden_unit_size"],
             num_hidden_layers=model_settings["num_hidden_layers"],
@@ -89,8 +144,9 @@ def run_bo(setting_dict):
         ucb = UpperConfidenceBound(model, beta=beta)
         model_optim_settings = setting_dict["model_optim"]
 
-        final_loss = fit_pytorch_model(
+        final_loss = fit_pytorch_model_with_constraint(
             model,
+            ucb,
             num_epochs=model_optim_settings["num_epochs"],
             learning_rate=model_optim_settings["learning_rate"],
         )
@@ -111,7 +167,7 @@ def run_bo(setting_dict):
             acq_optim_settings = setting_dict["acquisition_optim"]
 
             ucb = UpperConfidenceBound(model, beta=beta)
-            candidate_normaliezed, acq_value = optimize_acqf(
+            candidate, acq_value = optimize_acqf(
                 acq_function=ucb,
                 bounds=search_space,
                 q=1,
@@ -119,10 +175,10 @@ def run_bo(setting_dict):
                 raw_samples=acq_optim_settings["raw_samples"],
             )
 
-            candidate = trans.denormalize(candidate_normaliezed)
-            candidate = trans.discretize(candidate)
-            candidate = trans.clipping(candidate)
-            candidate = candidate.squeeze(0)
+            # candidate = trans.denormalize(candidate_normaliezed)
+            # candidate = trans.discretize(candidate)
+            # candidate = trans.clipping(candidate)
+            candidate = candidate.squeeze(0).round()
 
             y_new = objective_function(candidate).to(device)
 
@@ -141,11 +197,12 @@ def run_bo(setting_dict):
 
             # ---------------------------------------------------------------------------------------------
             # Update and refit the Bayesian MLP model
-            X_train_normalized = trans.normalize(X_train)
+            # X_train_normalized = trans.normalize(X_train)
 
-            model.set_train_data(X_train_normalized, y_train)
-            final_loss = fit_pytorch_model(
+            model.set_train_data(X_train, y_train)
+            final_loss = fit_pytorch_model_with_constraint(
                 model,
+                ucb,
                 num_epochs=model_optim_settings["num_epochs"],
                 learning_rate=model_optim_settings["learning_rate"],
             )
@@ -191,7 +248,7 @@ if __name__ == "__main__":
             "activation_fn": torch.nn.Tanh(),
         },
         "model_optim": {
-            "num_epochs": 1000,
+            "num_epochs": 100,
             "learning_rate": 0.01,
         },
         "acquisition_optim": {

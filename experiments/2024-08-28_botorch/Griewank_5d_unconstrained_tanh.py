@@ -44,14 +44,42 @@ def run_bo(setting_dict):
 
         # ---------------------------------------------------------------------------------------------
         # Step 1: Define the Objective Function and Search Space
-        def objective_function(X):
-            return (X**2).sum(dim=-1)
 
-        objective_function = negate_function(objective_function)
+        def griewank_function(X):
+            r"""
+            Griewank function implementation in PyTorch.
+            
+            f(x) = \sum_{i=1}^d \frac{x_i^2}{4000} - \prod_{i=1}^d \cos \left( \frac{x_i}{\sqrt{i}} \right) + 1
+            
+            Args:
+            - X (torch.Tensor): Input tensor of shape (n_samples, n_dimensions)
+            
+            Returns:
+            - torch.Tensor: Output tensor of shape (n_samples,)
+            """
+            # Ensure X is 2D (n_samples, n_dimensions)
+            if X.dim() == 1:
+                X = X.unsqueeze(0)
+            
+            # Sum term
+            sum_term = torch.sum(X**2 / 4000, dim=1)
+            
+            # Product term
+            i = torch.arange(1, X.shape[1] + 1, dtype=X.dtype, device=X.device)
+            prod_term = torch.prod(torch.cos(X / torch.sqrt(i)), dim=1)
+            
+            # Griewank function
+            return (sum_term - prod_term + 1).unsqueeze(0)
+
+        objective_function = negate_function(griewank_function)
 
         search_space = torch.tensor([[-10] * 5, [10] * 5]).to(torch.float32).to(device)
 
-        trans = InputTransformer(search_space)
+        trans = InputTransformer(
+            search_space,
+            lower_bound=0,
+            upper_bound=1
+        )
 
         # ---------------------------------------------------------------------------------------------
         # Step 2: Generate Initial Data
@@ -109,9 +137,8 @@ def run_bo(setting_dict):
             # ---------------------------------------------------------------------------------------------
             # Step 4: Define and optimize the Acquisition Function
             acq_optim_settings = setting_dict["acquisition_optim"]
-
             ucb = UpperConfidenceBound(model, beta=beta)
-            candidate_normaliezed, acq_value = optimize_acqf(
+            candidate, acq_value = optimize_acqf(
                 acq_function=ucb,
                 bounds=search_space,
                 q=1,
@@ -119,14 +146,14 @@ def run_bo(setting_dict):
                 raw_samples=acq_optim_settings["raw_samples"],
             )
 
-            candidate = trans.denormalize(candidate_normaliezed)
             candidate = trans.discretize(candidate)
             candidate = trans.clipping(candidate)
             candidate = candidate.squeeze(0)
 
             y_new = objective_function(candidate).to(device)
 
-            pred_dist = model(candidate)
+            candidate_normaliezed = trans.normalize(candidate.unsqueeze(0))
+            pred_dist = model(candidate_normaliezed)
             mean = pred_dist.mean
             covariance = pred_dist.variance
 
@@ -184,15 +211,15 @@ if __name__ == "__main__":
         "name": name,
         "device": device,
         "bo_iter": 10000,
-        "initial_data_size": 10,
+        "initial_data_size": 1,
         "model": {
             "hidden_unit_size": 64,
             "num_hidden_layers": 3,
             "activation_fn": torch.nn.Tanh(),
         },
         "model_optim": {
-            "num_epochs": 1000,
-            "learning_rate": 0.01,
+            "num_epochs": 100,
+            "learning_rate": 0.001,
         },
         "acquisition_optim": {
             "beta": 0.1,
