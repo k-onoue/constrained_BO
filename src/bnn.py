@@ -1,8 +1,13 @@
+from typing import Callable
+
 import torch
 import torch.nn as nn
+import torch.nn.utils as nn_utils
+from botorch.acquisition import AcquisitionFunction
 from botorch.models.model import Model
 from gpytorch.distributions import MultivariateNormal
 from gpytorch.likelihoods import GaussianLikelihood
+from torch import Tensor
 from torch.distributions.normal import Normal
 
 
@@ -164,9 +169,14 @@ class BayesianMLPModel(Model):
 
 
 # Function to train the model with GPU support
-def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01) -> None:
+def fit_pytorch_model(
+    model: torch.nn.Module, 
+    num_epochs: int = 100, 
+    learning_rate: float = 0.001
+) -> float:
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     model.train()
+    loss: Tensor = torch.tensor(0.0)
     for epoch in range(num_epochs):
         # print(f"epoch: {epoch}")
         optimizer.zero_grad()
@@ -175,3 +185,92 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01) -> None:
         optimizer.step()
 
     return loss.item()
+
+
+def fit_pytorch_model_with_constraint(
+    model: torch.nn.Module,
+    acqf: AcquisitionFunction,
+    g_constraint: Callable[[Tensor], Tensor],
+    num_epochs: int = 100,
+    learning_rate: float = 0.001,
+) -> float:
+    """
+    PyTorchモデルを制約条件付きで最適化します。
+
+    Args:
+        model: 最適化対象のPyTorchモデル。
+        acqf: 獲得関数。
+        g_constraint: 制約関数。引数Xをとり、制約を満たすかどうかを示すテンソルを返す。
+        num_epochs: 最適化のエポック数。デフォルトは1000。
+        learning_rate: 学習率。デフォルトは0.01。
+
+    Returns:
+        最終的な損失値。
+    """
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    model.train()
+
+    lambda1: Tensor = torch.tensor(
+        0.5, device=model.train_inputs.device, dtype=model.train_inputs.dtype
+    )
+    lambda2: Tensor = 1 - lambda1
+
+    X: Tensor = model.train_inputs
+    y: Tensor = model.train_targets
+    m: int = y.size(0)
+
+    loss: Tensor = torch.tensor(0.0)
+    for _ in range(num_epochs):
+        optimizer.zero_grad()
+
+        # 制約関数の評価
+        g_eval: Tensor = g_constraint(X)
+
+        # 獲得関数のバッチ評価
+        acqf_eval: Tensor = acqf(X).unsqueeze(1)
+
+        # 制約付き損失の計算
+        loss = compute_constrained_loss(
+            model, X, y, g_eval, acqf_eval, lambda1, lambda2, m
+        )
+
+        # 勾配計算と最適化
+        loss.backward()
+        nn_utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        optimizer.step()
+
+    return loss.item()
+
+
+def compute_constrained_loss(
+    model: torch.nn.Module,
+    X: Tensor,
+    y: Tensor,
+    g_eval: Tensor,
+    acqf_eval: Tensor,
+    lambda1: Tensor,
+    lambda2: Tensor,
+    m: int,
+) -> Tensor:
+    """
+    制約付き損失を計算します。
+
+    Args:
+        model: PyTorchモデル。
+        X: トレーニングデータの入力テンソル。
+        y: トレーニングデータのターゲットテンソル。
+        g_eval: 制約関数の評価値。
+        acqf_eval: 獲得関数の評価値。
+        lambda1: 制約の重み。
+        lambda2: ロスの重み。
+        m: サンプル数。
+
+    Returns:
+        計算された損失値。
+    """
+    ones: Tensor = torch.ones_like(g_eval)
+    log_prob_loss: Tensor = -model(X).log_prob(y).T @ g_eval
+    constrained_loss: Tensor = (
+        lambda1 * (ones - g_eval) * acqf_eval + lambda2 * log_prob_loss
+    )
+    return constrained_loss.sum() / m
