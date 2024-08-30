@@ -149,7 +149,7 @@ def fit_pytorch_model(
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     model.train()
     loss: Tensor = torch.tensor(0.0)
-    for epoch in range(num_epochs):
+    for _ in range(num_epochs):
         optimizer.zero_grad()
         loss = -model(model.train_inputs).log_prob(model.train_targets).mean()
         loss.backward()
@@ -176,16 +176,18 @@ def fit_pytorch_model_with_constraint(
 
     X: Tensor = model.train_inputs
     y: Tensor = model.train_targets
-    m: int = y.size(0)
 
     loss: Tensor = torch.tensor(0.0)
     for _ in range(num_epochs):
         optimizer.zero_grad()
 
         g_eval: Tensor = g_constraint(X)
-        acqf_eval: Tensor = acqf(X).unsqueeze(1)
+        acqf_eval: Tensor = acqf(
+            X.unsqueeze(0) if X.shape[0] == 1 else X.unsqueeze(1)
+        ).unsqueeze(-1)
+
         loss = compute_constrained_loss(
-            model, X, y, g_eval, acqf_eval, lambda1, lambda2, m
+            model, X, y, g_eval, acqf_eval, lambda1, lambda2
         )
 
         loss.backward()
@@ -203,11 +205,11 @@ def compute_constrained_loss(
     acqf_eval: Tensor,
     lambda1: Tensor,
     lambda2: Tensor,
-    m: int,
 ) -> Tensor:
     ones: Tensor = torch.ones_like(g_eval)
     log_prob_loss: Tensor = -model(X).log_prob(y).T @ g_eval
     constrained_loss: Tensor = (
         lambda1 * (ones - g_eval) * acqf_eval + lambda2 * log_prob_loss
     )
-    return constrained_loss.sum() / m
+
+    return constrained_loss.mean()
