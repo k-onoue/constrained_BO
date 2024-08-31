@@ -78,7 +78,6 @@ class BayesianMLP(nn.Module):
         self.bayesian_output = BayesianLinearRegression(hidden_unit_size, 1)
         self.min_val = min_val
         self.max_val = max_val
-        self.clipping = clipping
 
     def forward(self, x: torch.Tensor) -> Normal:
         x = self.hidden_layers(x)
@@ -91,11 +90,7 @@ class BayesianMLP(nn.Module):
         else:
             y_mean = y_dist.mean
 
-        if self.clipping:
-            y_mean = y_mean.clamp(min=-1e6, max=1e6)
-            y_stddev = y_dist.stddev.clamp(min=1e-6, max=1e1)
-        else:
-            y_stddev = y_dist.stddev
+        y_stddev = y_dist.stddev
 
         return Normal(y_mean, y_stddev)
 

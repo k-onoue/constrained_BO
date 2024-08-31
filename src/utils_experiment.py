@@ -204,6 +204,7 @@ class OptimLogParser:
             "iteration": [],
             "candidate": [],
             "acquisition_value": [],
+            "beta": [],
             "function_value": [],
             "final_training_loss": [],
             "iteration_time": [],
@@ -266,7 +267,7 @@ class OptimLogParser:
         self.bo_data = pd.DataFrame(self.bo_data)
 
     def _parse_settings(self, line):
-        from torch.nn import Tanh, ReLU
+        from torch.nn import Tanh, ReLU, LeakyReLU
         settings_str = line.split("settings:")[1].strip()
         settings_str = re.sub(r"device\(type='[^']+'\)", "'cpu'", settings_str)
         settings_str = re.sub(r"device\(type=\"[^\"]+\"\)", "'cpu'", settings_str)
@@ -311,6 +312,7 @@ class OptimLogParser:
         iteration_time_match = re.search(r"Iteration time: ([-+]?\d*\.\d+)", line)
         surrogate_mean_match = re.search(r"Suroggate Mean: ([-+]?\d*\.\d+|\d+)", line)
         surrogate_covariance_match = re.search(r"Suroggate Covariance: ([-+]?\d*\.\d+|\d+)", line)
+        beta_match = re.search(r"Beta: ([-+]?\d*\.\d+|\d+)", line)
 
         if iteration_match:
             self.bo_data["iteration"].append(int(iteration_match.group(1)))
@@ -336,8 +338,10 @@ class OptimLogParser:
             if "surrogate_covariance" not in self.bo_data:
                 self.bo_data["surrogate_covariance"] = []
             self.bo_data["surrogate_covariance"].append(float(surrogate_covariance_match.group(1)))
-
-
+        if beta_match:
+            if "beta" not in self.bo_data:
+                self.bo_data["beta"] = []
+            self.bo_data["beta"].append(float(beta_match.group(1)))
 
 # if __name__ == "__main__":
 

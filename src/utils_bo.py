@@ -3,7 +3,9 @@ from typing import Callable
 
 import torch
 import torch.nn.utils as nn_utils
-from botorch.acquisition import AcquisitionFunction
+from botorch.acquisition import AcquisitionFunction, UpperConfidenceBound
+from botorch.optim import optimize_acqf
+from scipy.optimize import minimize
 from torch import Tensor
 
 from .bnn import BayesianMLPModel
@@ -98,10 +100,10 @@ class InputTransformer:
 # 3. メインロジックに関係する関数
 def initialize_model(
     setting_dict: dict,
-    device: torch.device,
     X_train_normalized: torch.Tensor,
     y_train: torch.Tensor,
 ):
+    device = setting_dict["device"]
     model_settings = setting_dict["model"]
     model = BayesianMLPModel(
         X_train_normalized,
@@ -109,6 +111,8 @@ def initialize_model(
         hidden_unit_size=model_settings["hidden_unit_size"],
         num_hidden_layers=model_settings["num_hidden_layers"],
         activation_fn=model_settings["activation_fn"],
+        min_val=model_settings["min_val"],
+        max_val=model_settings["max_val"],
     ).to(device)
     return model
 
@@ -138,9 +142,62 @@ def evaluate_candidate(model, trans, acqf, candidate, objective_function, device
     logging.info(f"Suroggate Mean: {mean.item()}")
     logging.info(f"Suroggate Covariance: {covariance.item()}")
     logging.info(f"Acquisition Value: {acqf(candidate.unsqueeze(0)).item()}")
+    logging.info(f"Beta: {acqf.beta}")
     logging.info(f"Function Value: {y_new.item()}")
 
     return candidate, y_new
+
+
+def adjust_beta(model, X_train, search_space, beta, beta_h, acq_optim_settings):
+    def objective(params):
+        delta_beta = params[0]
+        adjusted_beta = beta + delta_beta
+        acq_function = UpperConfidenceBound(model, beta=adjusted_beta)
+        x_new = optimize_acquisition(acq_function, search_space, acq_optim_settings)
+        if x_new is None:
+            return float("inf")
+        rounded_x_new = torch.round(x_new)
+
+        penalty = float("inf")
+        if (rounded_x_new == X_train).all(dim=1).any():
+            penalty = 1000
+
+        return delta_beta + torch.norm(x_new - rounded_x_new).item() + penalty
+
+    initial_guess = [0.0]
+    bounds = [(0.0, beta_h)]
+    result = minimize(objective, initial_guess, bounds=bounds, method="L-BFGS-B")
+    delta_beta = result.x[0]
+
+    print()
+    print(f"Delta beta: {result}")
+    print()
+
+    return beta + delta_beta
+
+
+def optimize_acquisition(
+    acq_function: AcquisitionFunction,
+    search_space: torch.Tensor,
+    acq_optim_settings: dict,
+):
+    try:
+        candidates, _ = optimize_acqf(
+            acq_function,
+            bounds=search_space,
+            q=1,
+            num_restarts=acq_optim_settings["num_restarts"],
+            raw_samples=acq_optim_settings["raw_samples"],
+        )
+    except RuntimeError as e:
+        logging.warning(f"RuntimeError during acquisition optimization: {e}")
+        return None
+
+    if torch.isnan(candidates).any() or torch.isinf(candidates).any():
+        logging.warning("Candidates contain NaN or Inf values")
+        return None
+
+    return candidates.detach()
 
 
 def fit_pytorch_model(
