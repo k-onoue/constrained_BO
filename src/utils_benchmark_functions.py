@@ -102,25 +102,43 @@ def schubert_function(X):
         return torch.tensor(result.item()).to(dtype=dtype).to(device=device)  # スカラー値として返す
     return result
 
+
 def eggholder_function(X):
-    if X.dim() == 1:
+    dtype = X.dtype
+    device = X.device
+    input_dim = X.dim()
+
+    if input_dim == 1:
         X = X.unsqueeze(0)  # 1次元のテンソルを2次元に変換
+
     x1 = X[:, 0]
     x2 = X[:, 1]
     term1 = -(x2 + 47) * torch.sin(torch.sqrt(torch.abs(x2 + x1 / 2 + 47)))
     term2 = -x1 * torch.sin(torch.sqrt(torch.abs(x1 - (x2 + 47))))
-    return term1 + term2
+    result = term1 + term2
+
+    if input_dim == 1:
+        return torch.tensor(result.item()).to(dtype=dtype).to(device=device)
+    return result
 
 def griewank_function(X):
-    if X.dim() == 1:
+    dtype = X.dtype
+    device = X.device
+    input_dim = X.dim()
+
+    if input_dim == 1:
         X = X.unsqueeze(0)  # 1次元のテンソルを2次元に変換
+
     sum_term = torch.sum(X**2 / 4000, dim=1)
     prod_term = torch.prod(
         torch.cos(
-            X
-            / torch.sqrt(torch.arange(1, X.size(1) + 1, dtype=X.dtype, device=X.device))
+            X / torch.sqrt(torch.arange(1, X.size(1) + 1, dtype=dtype, device=device))
         ),
         dim=1,
     )
-    return sum_term - prod_term + 1
+    result = sum_term - prod_term + 1
+
+    if input_dim == 1:
+        return torch.tensor(result.item()).to(dtype=dtype).to(device=device)
+    return result
 
