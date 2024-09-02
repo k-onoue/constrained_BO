@@ -169,10 +169,6 @@ def adjust_beta(model, X_train, search_space, beta, beta_h, acq_optim_settings):
     result = minimize(objective, initial_guess, bounds=bounds, method="L-BFGS-B")
     delta_beta = result.x[0]
 
-    print()
-    print(f"Delta beta: {result}")
-    print()
-
     return beta + delta_beta
 
 

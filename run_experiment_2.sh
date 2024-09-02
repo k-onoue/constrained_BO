@@ -1,7 +1,14 @@
-python3 experiments/2024-08-31_botorch/Simple_5d_constrained3_LeakyReLU.py &
-python3 experiments/2024-08-31_botorch/Simple_5d_constrained3_LeakyReLU_2.py &
-python3 experiments/2024-08-31_botorch/Simple_5d_constrained3_LeakyReLU_3.py &
+#!/bin/bash
 
+# 対象ディレクトリのパス
+DIR="experiments/2024-09-02_botorch_eggholder"
+
+# 並列で実行
+for FILE in "$DIR"/Eggholder_*.py; do
+  python3 "$FILE" &
+done
+
+# すべてのバックグラウンドプロセスの終了を待つ
 wait
 
-echo "All experiments have been completed."
+echo "All scripts have finished executing."

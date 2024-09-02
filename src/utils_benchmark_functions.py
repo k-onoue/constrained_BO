@@ -5,7 +5,9 @@ import torch
 """
 バッチ処理に対応していないので注意
 """
-def ackley_function(x, a=10, b=0.2, c=2*np.pi):
+
+
+def ackley_function(x, a=10, b=0.2, c=2 * np.pi):
     """
     d次元Ackley関数を計算する。
 
@@ -33,6 +35,8 @@ def ackley_function(x, a=10, b=0.2, c=2*np.pi):
 """
 バッチ処理に対応していないので注意
 """
+
+
 def rosenbrock_function(x, a=1, b=100):
     """
     d次元Rosenbrock関数を計算する
@@ -50,12 +54,14 @@ def rosenbrock_function(x, a=1, b=100):
         Rosenbrock関数の値
     """
     x = np.array(x)  # ここでリストをNumPy配列に変換
-    return np.sum(b * (x[1:] - x[:-1]**2)**2 + (a - x[:-1])**2)
+    return np.sum(b * (x[1:] - x[:-1] ** 2) ** 2 + (a - x[:-1]) ** 2)
 
 
 """
 バッチ処理に対応していないので注意
 """
+
+
 def discretize_function(x, c=0.1):
     """
     連続値の入力を離散化する
@@ -73,44 +79,48 @@ def discretize_function(x, c=0.1):
     return c * np.floor(x / c)
 
 
-# Test function
-def test_function(x):
-    r"""
-    $f(x) = e^{-(x-2)^2} + e^{-\left(\frac{x-6}{10}\right)^2} + \frac{1}{e^{x^2} + 1}$
-    """
-    return np.exp(-((x - 2) ** 2)) + np.exp(-((x - 6) ** 2) / 10) + 1 / (x**2 + 1)
-
-
-# Schubert function with batch input
 def schubert_function(X):
-    r"""
-    $f(x_1, x_2) = \prod_{i=1}^2 \left( \sum_{j=1}^5 j \cos((j + 1)x_i + j) \right)$
-    """
-    j = torch.arange(1, 6).float()
-    sum1 = torch.sum(j * torch.cos((j + 1) * X[:, 0:1] + j), dim=1)
-    sum2 = torch.sum(j * torch.cos((j + 1) * X[:, 1:2] + j), dim=1)
-    return sum1 * sum2
+    dtype = X.dtype
+    device = X.device
+    input_dim = X.dim()
 
+    if X.dim() == 1:
+        X = X.unsqueeze(0)  # 1次元のテンソルを2次元に変換
 
-# Eggholder function with batch input
+    # jの値を1から5までのテンソルで表現
+    j = torch.arange(1, 6, dtype=X.dtype, device=X.device).view(1, -1)
+    
+    # 各次元のXに対して計算を行う
+    X_expanded = X.unsqueeze(-1)  # (n, d, 1) の形に拡張
+    terms = j * torch.cos((j + 1) * X_expanded + j)  # (n, d, 5)
+    
+    # 次元ごとにsumを取って、最終的なprodを取る
+    result = torch.prod(terms.sum(dim=-1), dim=-1)  # sumは最後の次元、prodは次元d
+
+    # 出力が1つの要素しかない場合はスカラー（0次元）にする
+    if input_dim == 1:
+        return torch.tensor(result.item()).to(dtype=dtype).to(device=device)  # スカラー値として返す
+    return result
+
 def eggholder_function(X):
-    r"""
-    f(x_1, x_2) = - (x_2 + 47) \sin \left( \sqrt{\left| x_2 + \frac{x_1}{2} + 47 \right|} \right) - x_1 \sin \left( \sqrt{\left| x_1 - (x_2 + 47) \right|} \right)
-    """
+    if X.dim() == 1:
+        X = X.unsqueeze(0)  # 1次元のテンソルを2次元に変換
     x1 = X[:, 0]
     x2 = X[:, 1]
     term1 = -(x2 + 47) * torch.sin(torch.sqrt(torch.abs(x2 + x1 / 2 + 47)))
     term2 = -x1 * torch.sin(torch.sqrt(torch.abs(x1 - (x2 + 47))))
     return term1 + term2
 
-
-# Griewank function with batch input
 def griewank_function(X):
-    r"""
-    f(x) = \sum_{i=1}^d \frac{x_i^2}{4000} - \prod_{i=1}^d \cos \left( \frac{x_i}{\sqrt{i}} \right) + 1
-    """
+    if X.dim() == 1:
+        X = X.unsqueeze(0)  # 1次元のテンソルを2次元に変換
     sum_term = torch.sum(X**2 / 4000, dim=1)
     prod_term = torch.prod(
-        torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1
+        torch.cos(
+            X
+            / torch.sqrt(torch.arange(1, X.size(1) + 1, dtype=X.dtype, device=X.device))
+        ),
+        dim=1,
     )
     return sum_term - prod_term + 1
+
