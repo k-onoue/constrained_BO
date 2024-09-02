@@ -36,8 +36,6 @@ def run_bo(setting_dict: dict):
         ######################################################################
         # Step 1: Define the Objective Function, Search Space and Constraints
         objective_function = schubert_function
-        
-        objective_function = negate_function(objective_function)
 
         search_space = torch.tensor([[-10] * 5, [10] * 5]).to(torch.float32).to(device)
 

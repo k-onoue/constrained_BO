@@ -68,7 +68,7 @@ sbatch --job-name=benchmark_${PARTITION} \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_simple/Simple_5d_constrained3_tanh_3.py"
+       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_constrained3_tanh_3.py"
        
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
