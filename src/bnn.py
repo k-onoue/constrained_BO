@@ -156,5 +156,3 @@ class BayesianMLPModel(Model):
     ) -> None:
         self._train_inputs = inputs
         self._train_targets = targets
-
-
