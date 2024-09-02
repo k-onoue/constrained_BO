@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# 対象ディレクトリのパス
-DIR="experiments/2024-09-03_botorch_simple"
+# Directory containing the files
+DIRECTORY="experiments/2024-09-03_botorch_eggholder"
 
-# ファイル名を変更
-for file in "$DIR"/*; do
-    # ファイル名を取得
-    filename=$(basename "$file")
-    
-    # 新しいファイル名を生成
-    new_filename=$(echo "$filename" | sed -E 's/(constrained3_|unconstrained_)/\1d_/')
-    
-    # ファイルをリネーム
-    mv "$DIR/$filename" "$DIR/$new_filename"
-    
-    echo "Renamed: $filename -> $new_filename"
+# Loop over all files in the directory
+for file in "$DIRECTORY"/*; do
+  # Extract the base filename without the path
+  base_name=$(basename "$file")
+  
+  # Replace 'Simple' with 'Schubert' in the filename
+  new_name=$(echo "$base_name" | sed 's/Schubert/Eggholder/')
+  
+  # Rename the file
+  mv "$file" "$DIRECTORY/$new_name"
 done
+
+echo "Renaming completed."

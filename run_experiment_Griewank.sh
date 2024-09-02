@@ -27,61 +27,59 @@ echo "$config_content" > $config_file
 echo "config.ini has been overwritten with the following content:"
 cat $config_file
 
-# Run Simple functions
+# Run Griewank functions
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_constrained3_ReLU.py"
+       --wrap="python3 experiments/2024-09-03_botorch_griewank/Griewank_5d_constrained3_d_ReLU.py"
        
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_constrained3_ReLU_2.py"
+       --wrap="python3 experiments/2024-09-03_botorch_griewank/Griewank_5d_constrained3_d_ReLU_2.py"
 
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_constrained3_ReLU_3.py"
+       --wrap="python3 experiments/2024-09-03_botorch_griewank/Griewank_5d_constrained3_d_ReLU_3.py"
        
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_constrained3_tanh.py"
+       --wrap="python3 experiments/2024-09-03_botorch_griewank/Griewank_5d_constrained3_d_tanh.py"
 
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_constrained3_tanh_2.py"
+       --wrap="python3 experiments/2024-09-03_botorch_griewank/Griewank_5d_constrained3_d_tanh_2.py"
 
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_constrained3_tanh_3.py"
+       --wrap="python3 experiments/2024-09-03_botorch_griewank/Griewank_5d_constrained3_d_tanh_3.py"
        
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_unconstrained_ReLU.py"
+       --wrap="python3 experiments/2024-09-03_botorch_griewank/Griewank_5d_unconstrained_d_ReLU.py"
 
 sbatch --job-name=benchmark_${PARTITION} \
        --output=results/output_%j.txt \
        --cpus-per-task=$CPUS_PER_TASK \
        --partition=$PARTITION \
        --time=$TIME \
-       --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_unconstrained_tanh.py"
-
-
+       --wrap="python3 experiments/2024-09-03_botorch_griewank/Griewank_5d_unconstrained_d_tanh.py"
