@@ -84,4 +84,3 @@ sbatch --job-name=benchmark_${PARTITION} \
        --time=$TIME \
        --wrap="python3 experiments/2024-09-02_botorch_schubert/Schubert_5d_unconstrained_tanh.py"
 
-
