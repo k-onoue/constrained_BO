@@ -32,8 +32,8 @@ cat $config_file
 # Parallelize over dims from 5 to 15
 for DIM in {5..15}; do
     # Set up experiment name and log file paths
-    EXPERIMENT_NAME="proposed_bo_dim_${DIM}"
-    LOG_DIR="logs/${EXPERIMENTAL_ID}/train"
+    EXPERIMENT_NAME="_dim${DIM}"
+    LOG_DIR="logs/${EXPERIMENTAL_ID}"
 
     # Run each experiment in parallel using sbatch
     sbatch --job-name="${EXPERIMENT_NAME}" \
@@ -41,5 +41,5 @@ for DIM in {5..15}; do
            --cpus-per-task=$CPUS_PER_TASK \
            --partition=$PARTITION \
            --time=$TIME \
-           --wrap="python3 experiments/2024-09-24/proposed_bo.py --dim $DIM"
+           --wrap="python3 experiments/2024-09-29/benchmark_cp_decomp.py --dim $DIM"
 done
