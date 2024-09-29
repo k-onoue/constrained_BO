@@ -32,7 +32,7 @@ cat $config_file
 # Parallelize over dims from 5 to 15
 for DIM in {5..15}; do
     # Set up experiment name and log file paths
-    EXPERIMENT_NAME="_dim${DIM}"
+    EXPERIMENT_NAME="benchmark_cp_decomp_dim${DIM}"
     LOG_DIR="logs/${EXPERIMENTAL_ID}"
 
     # Run each experiment in parallel using sbatch
