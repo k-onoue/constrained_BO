@@ -1,7 +1,6 @@
 import numpy as np
 from tensorly.cp_tensor import cp_to_tensor
 from tensorly.decomposition import parafac
-# from .utils_warcraft import generate_random_tuple, convert_path_index_to_arr, WarcraftObjective
 from utils_warcraft import generate_random_tuple, convert_path_index_to_arr, WarcraftObjective
 
 
@@ -50,8 +49,6 @@ def ucb(mean_tensor, variance_tensor, trade_off_param=1.0, batch_size=10, maximi
     return top_indices
 
 
-
-
 if __name__ == "__main__":
 
     map_targeted = np.array([[1, 4], [2, 1]])
@@ -61,7 +58,7 @@ if __name__ == "__main__":
         "name": "test" * 10,
         "seed": 0,
         "category_num": 7,
-        "iter": 100,
+        "iter": 10,  # Number of iterations for Bayesian optimization
         "init_eval_num": 7 ** 3,
         "cp_settings": {
             "dim": len(map_targeted.flatten()),
@@ -79,7 +76,7 @@ if __name__ == "__main__":
     # General settings
     seed = settings["seed"]
     category_num = settings["category_num"]
-    iter_num = settings["iter"]
+    iter_num = settings["iter"]  # Number of iterations
     init_eval_num = settings["init_eval_num"]
 
     # CP decomposition settings
@@ -93,11 +90,14 @@ if __name__ == "__main__":
     batch_size = settings["acqf_settings"]["batch_size"]
     maximize = settings["acqf_settings"]["maximize"]
 
+    # Initialize objective function
     objective_function = WarcraftObjective(map_targeted_scaled)
 
+    # Initialize tensors for evaluations and masking
     tensor_eval = np.zeros((category_num,) * dim)
     tensor_eval_bool = np.zeros((category_num,) * dim)
 
+    # Generate initial random paths
     initial_path_index_list = generate_random_tuple(
         category_num=category_num, 
         dim=dim, 
@@ -108,42 +108,56 @@ if __name__ == "__main__":
         for path in initial_path_index_list
     ]
     
+    # Evaluate the initial paths
     for path_index, path_arr in zip(initial_path_index_list, initial_path_arr_list):
         tensor_eval[path_index] = objective_function(path_arr)
         tensor_eval_bool[path_index] = 1
 
-    div = int(1 / mask_ratio)
-    mask_split_list = split_list_equally(initial_path_index_list, div)
+    all_evaluated_indices = initial_path_index_list.copy()
 
-    # To accumulate results for computing mean and variance
-    tensors_list = []
+    # Bayesian Optimization loop
+    for iteration in range(iter_num):
+        print(f"\nIteration {iteration + 1}/{iter_num}")
 
-    for mask_list in mask_split_list:
-        mask_tensor = tensor_eval_bool.copy()
-        for mask_index in mask_list:
-            mask_tensor[mask_index] = 0
+        # Add the suggested indices to the mask creation
+        div = int(1 / mask_ratio)
+        mask_split_list = split_list_equally(all_evaluated_indices, div)
 
-        # Perform CP decomposition
-        cp_tensor = parafac(tensor_eval, rank=cp_rank, mask=mask_tensor, n_iter_max=als_iter_num)
-        
-        # Convert the CP decomposition back to a tensor
-        reconstructed_tensor = cp_to_tensor(cp_tensor)
-        
-        # Append the reconstructed tensor to the list for later processing
-        tensors_list.append(reconstructed_tensor)
+        tensors_list = []
 
-    # Now calculate mean and variance across the tensors
-    tensors_stack = np.stack(tensors_list)
-    mean_tensor = np.mean(tensors_stack, axis=0)
-    variance_tensor = np.var(tensors_stack, axis=0)
+        # Perform CP decomposition with masking
+        for mask_list in mask_split_list:
+            mask_tensor = tensor_eval_bool.copy()
+            for mask_index in mask_list:
+                mask_tensor[mask_index] = 0
 
-    # Display the processed tensor, mean, and variance
-    print("Sample mean tensor:")
-    print(f'max: {np.max(mean_tensor)}, min: {np.min(mean_tensor)}')
+            # Perform CP decomposition
+            cp_tensor = parafac(tensor_eval, rank=cp_rank, mask=mask_tensor, n_iter_max=als_iter_num)
+            
+            # Convert the CP decomposition back to a tensor
+            reconstructed_tensor = cp_to_tensor(cp_tensor)
+            
+            # Append the reconstructed tensor to the list for later processing
+            tensors_list.append(reconstructed_tensor)
 
-    print("Sample variance tensor:")
-    print(f'max: {np.max(variance_tensor)}, min: {np.min(variance_tensor)}')
+        # Calculate mean and variance tensors
+        tensors_stack = np.stack(tensors_list)
+        mean_tensor = np.mean(tensors_stack, axis=0)
+        variance_tensor = np.var(tensors_stack, axis=0)
 
-    suggested_indices = ucb(mean_tensor, variance_tensor, trade_off_param, batch_size, maximize)
-    print("Suggested indices:")
-    print(suggested_indices)
+        # Display the mean and variance tensors
+        print(f"Mean tensor max: {np.max(mean_tensor)}, min: {np.min(mean_tensor)}")
+        print(f"Variance tensor max: {np.max(variance_tensor)}, min: {np.min(variance_tensor)}")
+
+        # Suggest new indices based on UCB
+        suggested_indices = ucb(mean_tensor, variance_tensor, trade_off_param, batch_size, maximize)
+        print(f"Suggested indices: {suggested_indices}")
+
+        # Evaluate the new points and update the tensors
+        for index in suggested_indices:
+            path_arr = convert_path_index_to_arr(index, map_targeted.shape)
+            tensor_eval[index] = objective_function(path_arr)
+            tensor_eval_bool[index] = 1
+
+        # Add the suggested indices to the list of all evaluated indices
+        all_evaluated_indices.extend(suggested_indices)

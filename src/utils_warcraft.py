@@ -148,16 +148,7 @@ def generate_random_tuple(category_num, dim, num=1):
 
 
 def convert_path_index_to_arr(path, map_shape):
-
-    print()
-    print(f'path: {path}')
-    print(f'map_shape: {map_shape}')
-    print()
-
     path_gen_reversed = iter(reversed(path))
-
-    print(f'path_gen_reversed: {path_gen_reversed}')
-
     map = np.zeros(map_shape)
         
     for i in range(map_shape[0]):
