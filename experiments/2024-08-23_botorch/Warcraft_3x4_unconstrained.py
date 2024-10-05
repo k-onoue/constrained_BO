@@ -20,8 +20,7 @@ LOG_DIR = config["paths"]["logs_dir"]
 sys.path.append(PROJECT_DIR)
 
 from src.bnn import BayesianMLPModel, fit_pytorch_model
-from src.objectives_botorch import (WarcraftObjectiveBoTorch,
-                                    generate_initial_data)
+from src.objectives_botorch import WarcraftObjectiveBoTorch, generate_initial_data
 
 
 def set_logger(log_filename_base):
@@ -68,7 +67,9 @@ def run_bo(setting_dict):
 
     log_print("Initial data points and corresponding function values:")
     for i in range(initial_data_size):
-        log_print(f"Candidate: {X_train[i].cpu().numpy()}, Function Value: {y_train[i].item()}")
+        log_print(
+            f"Candidate: {X_train[i].cpu().numpy()}, Function Value: {y_train[i].item()}"
+        )
 
     # Flatten X_train and move it to the correct device
     n_samples = X_train.shape[0]
@@ -97,13 +98,13 @@ def run_bo(setting_dict):
 
     # Repeat optimization for a specified number of iterations
     n_iterations = setting_dict["bo_iter"]
-    best_value = float('-inf')
+    best_value = float("-inf")
 
     for iteration in range(n_iterations):
         iter_start_time = time.time()
-        
+
         log_print(f"Iteration {iteration + 1}/{n_iterations}")
-        
+
         # ---------------------------------------------------------------------------------------------
         # Step 4: Define the Acquisition Function
         acq_optim_settings = setting_dict["acquisition_optim"]

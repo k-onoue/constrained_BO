@@ -6,7 +6,6 @@ import warnings
 from copy import deepcopy
 
 import torch
-import torch.nn.utils as nn_utils
 from botorch.acquisition import UpperConfidenceBound
 from botorch.optim import optimize_acqf
 
@@ -22,17 +21,16 @@ sys.path.append(PROJECT_DIR)
 from src.bnn import BayesianMLPModel
 
 from src.bnn import fit_pytorch_model
+
 # from src.objectives_botorch import WarcraftObjectiveBoTorch
 # from src.objectives_botorch import generate_initial_data
 from src.utils_experiment import negate_function
 from src.utils_experiment import generate_integer_samples
-from utils_bo import InputTransformer
 
 import logging
 
 # from src.utils_experiment import log_print
 from src.utils_experiment import set_logger
-
 
 
 def run_bo(setting_dict):

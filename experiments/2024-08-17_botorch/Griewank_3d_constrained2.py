@@ -175,7 +175,6 @@ class Experiment:
         self.start_time = time.time()  # 開始時間を記録
 
         for iteration in range(1, self.config["n_iterations"] + 1):
-
             # 経過時間のチェック
             elapsed_time = time.time() - self.start_time
             if self.time_budget and elapsed_time > self.time_budget:

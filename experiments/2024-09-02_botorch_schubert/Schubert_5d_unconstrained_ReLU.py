@@ -19,9 +19,14 @@ LOG_DIR = config["paths"]["logs_dir"]
 sys.path.append(PROJECT_DIR)
 
 from src.utils_benchmark_functions import schubert_function
-from src.utils_bo import (InputTransformer, evaluate_candidate,
-                          fit_pytorch_model, generate_integer_samples,
-                          initialize_model, log_initial_data, negate_function)
+from src.utils_bo import (
+    InputTransformer,
+    evaluate_candidate,
+    fit_pytorch_model,
+    generate_integer_samples,
+    initialize_model,
+    log_initial_data,
+)
 from src.utils_experiment import set_logger
 
 

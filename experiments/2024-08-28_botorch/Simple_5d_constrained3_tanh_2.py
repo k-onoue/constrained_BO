@@ -80,16 +80,15 @@ def fit_pytorch_model_with_constraint(model, acqf, num_epochs=1000, learning_rat
 
         ones = torch.ones_like(g_eval)
 
-        loss = (
-            lambda1 * (ones - g_eval) * acqf_eval
-            + lambda2 * (-f(X).log_prob(y).T @ g_eval)
+        loss = lambda1 * (ones - g_eval) * acqf_eval + lambda2 * (
+            -f(X).log_prob(y).T @ g_eval
         )
 
         # print(f"g_eval: {g_eval.shape}")
         # print(f"acqf_eval: {acqf_eval.shape}")
         # print(f"f(X): {f(X).log_prob(y).shape}")
         # print(f"f(X): {f(X).log_prob(y[:2]).shape}")
-        
+
         loss = loss.sum() / m
 
         loss.backward()

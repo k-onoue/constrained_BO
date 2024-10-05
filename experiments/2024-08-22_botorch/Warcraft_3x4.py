@@ -5,12 +5,10 @@ import configparser
 import datetime
 import logging
 import time
-import csv
 
 import torch
 from botorch.optim import optimize_acqf
 from botorch.acquisition import UpperConfidenceBound
-from scipy.optimize import minimize
 
 
 warnings.filterwarnings("ignore")

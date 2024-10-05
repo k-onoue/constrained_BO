@@ -1,28 +1,32 @@
 import sys
 import logging
 from datetime import datetime
+
 # ログ設定
 # 現在の時刻を取得して、ログファイル名に追加
 current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_filename = f"experiment_8_{current_time}.log"
 
 # ログ設定
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
-                    handlers=[logging.FileHandler(log_filename), logging.StreamHandler(sys.stdout)])
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler(log_filename), logging.StreamHandler(sys.stdout)],
+)
 
 import configparser
 
 config = configparser.ConfigParser()
-config_path = './config.ini' # プロジェクトルートから実行するなら './config.ini'
+config_path = "./config.ini"  # プロジェクトルートから実行するなら './config.ini'
 config.read(config_path)
-PROJECT_DIR = config['paths']['project_dir']
+PROJECT_DIR = config["paths"]["project_dir"]
 sys.path.append(PROJECT_DIR)
 
 import torch
-from botorch.acquisition import AcquisitionFunction
 from botorch.acquisition import UpperConfidenceBound
 from botorch.optim import optimize_acqf
 from scipy.optimize import minimize
+
 # from src.bnn import BayesianMLPModel, fit_pytorch_model
 from src.bnn import BayesianMLPModel
 from src.utils_experiment import generate_integer_samples
@@ -42,7 +46,7 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
         result = torch.exp(-scale * diff)
         # n x 1 の形状に変換して返す
         return result.unsqueeze(1)
-    
+
     param1 = 0.5
     param2 = 1 - param1
 
@@ -58,8 +62,10 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
             x = x.unsqueeze(1).reshape(1, -1)
             ucb_eval.append(ucb(x))
         ucb_eval = torch.tensor(ucb_eval).reshape(-1, 1)
-        loss1 = (1 - g_eval).T @ ucb_eval 
-        loss2 = -(model(model.train_inputs).log_prob(model.train_targets).T @ g_eval) / model.train_targets.size(0)
+        loss1 = (1 - g_eval).T @ ucb_eval
+        loss2 = -(
+            model(model.train_inputs).log_prob(model.train_targets).T @ g_eval
+        ) / model.train_targets.size(0)
         loss = param1 * loss1 + param2 * loss2
         loss.backward()
         optimizer.step()
@@ -73,7 +79,7 @@ def fit_pytorch_model(model, num_epochs=1000, learning_rate=0.01):
 #         self.lambda2 = 1 - lambda1
 #         self.g = g
 #         self.ucb = UpperConfidenceBound(model, beta=0.1)
-    
+
 #     def forward(self, X):
 #         """
 #         オリジナル
@@ -96,9 +102,11 @@ class Experiment:
         self.bounds = config["bounds"]
         self.objective_function = config["objective_function"]
         self.direction = config["direction"]
-        self.train_x, self.train_y = self.generate_initial_data(config["initial_points"])
+        self.train_x, self.train_y = self.generate_initial_data(
+            config["initial_points"]
+        )
         self.model = self.initialize_model(self.train_x, self.train_y)
-        self.best_values = []  
+        self.best_values = []
 
         self.beta = config["algo_params"].get("beta", 2.0)
         self.beta_h = config["algo_params"].get("beta_h", 10.0)
@@ -144,10 +152,10 @@ class Experiment:
             acq_function = self.acquisition_function(adjusted_beta)
             new_x = self.optimize_acquisition(acq_function)
             if new_x is None:
-                return float('inf')
+                return float("inf")
             rounded_new_x = torch.round(new_x)
 
-            penalty = float('inf')
+            penalty = float("inf")
             if (rounded_new_x == self.train_x).all(dim=1).any():
                 penalty = 1000
 
@@ -156,7 +164,7 @@ class Experiment:
         initial_guess = [0.0]
         bounds = [(0.0, self.beta_h)]
 
-        result = minimize(objective, initial_guess, bounds=bounds, method='L-BFGS-B')
+        result = minimize(objective, initial_guess, bounds=bounds, method="L-BFGS-B")
         delta_beta = result.x[0]
         self.beta += delta_beta
 
@@ -188,39 +196,40 @@ class Experiment:
 
     def run(self):
         for iteration in range(1, self.config["n_iterations"] + 1):
-
             fit_pytorch_model(self.model)
-            
+
             new_x, new_y = self.optimize_acqf_and_get_observation()
             if new_x is None or new_y is None:
                 print("Stopping optimization due to numerical issues.")
                 break
-            
+
             print()
-            print(f'new_x: {new_x}')
+            print(f"new_x: {new_x}")
             print()
 
             self.train_x = torch.cat([self.train_x, new_x])
             self.train_y = torch.cat([self.train_y, new_y])
             self.model = self.initialize_model(self.train_x, self.train_y)
-            
+
             best_value = self.train_y.max().item()
             self.best_values.append(best_value)
 
-            print(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {new_x}")
-            logging.info(f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {new_x}")
+            print(
+                f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {new_x}"
+            )
+            logging.info(
+                f"Iteration {iteration}/{self.config['n_iterations']}: Best value = {best_value}, Best x = {new_x}"
+            )
 
         print("All done.")
         logging.info("All done.")
-
-
 
 
 if __name__ == "__main__":
     import warnings
     import plotly.graph_objects as go
 
-    warnings.filterwarnings('ignore')
+    warnings.filterwarnings("ignore")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.float
@@ -234,42 +243,44 @@ if __name__ == "__main__":
         f(x) = \sum_{i=1}^d \frac{x_i^2}{4000} - \prod_{i=1}^d \cos \left( \frac{x_i}{\sqrt{i}} \right) + 1
         """
         sum_term = torch.sum(X**2 / 4000, dim=1)
-        prod_term = torch.prod(torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1)
+        prod_term = torch.prod(
+            torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1
+        )
         return -(sum_term - prod_term + 1)
-    
+
     objective_function = griewank_function
 
     experiment_config = {
         "initial_points": 5,
-        "bounds": torch.tensor([[-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]], device=device, dtype=dtype),
+        "bounds": torch.tensor(
+            [[-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]], device=device, dtype=dtype
+        ),
         "batch_size": 1,
         "num_restarts": 10,
         "raw_samples": 20,
         "n_iterations": 1000,
         "objective_function": objective_function,
         "direction": "minimize",
-        "algo_params": {
-            "beta": 2.0,
-            "beta_h": 10.0,
-            "l_h": 2.0
-        }
+        "algo_params": {"beta": 2.0, "beta_h": 10.0, "l_h": 2.0},
     }
 
     experiment = Experiment(experiment_config)
     experiment.run()
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=list(range(1, len(experiment.best_values) + 1)),
-        y=experiment.best_values,
-        mode='lines+markers',
-        name='Best Objective Value'
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=list(range(1, len(experiment.best_values) + 1)),
+            y=experiment.best_values,
+            mode="lines+markers",
+            name="Best Objective Value",
+        )
+    )
 
     fig.update_layout(
-        title='Optimization History Plot',
-        xaxis_title='Iteration',
-        yaxis_title='Best Objective Value'
+        title="Optimization History Plot",
+        xaxis_title="Iteration",
+        yaxis_title="Best Objective Value",
     )
 
     fig.show()

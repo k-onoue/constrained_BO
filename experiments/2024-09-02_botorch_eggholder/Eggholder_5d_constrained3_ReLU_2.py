@@ -19,10 +19,14 @@ LOG_DIR = config["paths"]["logs_dir"]
 sys.path.append(PROJECT_DIR)
 
 from src.utils_benchmark_functions import eggholder_function
-from src.utils_bo import (InputTransformer, evaluate_candidate,
-                          fit_pytorch_model_with_constraint,
-                          generate_integer_samples, initialize_model,
-                          log_initial_data, negate_function)
+from src.utils_bo import (
+    InputTransformer,
+    evaluate_candidate,
+    fit_pytorch_model_with_constraint,
+    generate_integer_samples,
+    initialize_model,
+    log_initial_data,
+)
 from src.utils_experiment import set_logger
 
 
@@ -37,7 +41,9 @@ def run_bo(setting_dict: dict):
         # Step 1: Define the Objective Function, Search Space and Constraints
         objective_function = eggholder_function
 
-        search_space = torch.tensor([[-512] * 5, [512] * 5]).to(torch.float32).to(device)
+        search_space = (
+            torch.tensor([[-512] * 5, [512] * 5]).to(torch.float32).to(device)
+        )
 
         trans = InputTransformer(search_space, lower_bound=0, upper_bound=1)
 

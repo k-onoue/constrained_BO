@@ -8,7 +8,6 @@ from botorch.optim import optimize_acqf
 from scipy.optimize import minimize
 
 
-
 class BaseBO(ABC):
     def __init__(self, bounds):
         self.bounds = bounds
@@ -55,21 +54,21 @@ class BO(BaseBO):
         # from botorch.models import SingleTaskGP
         # from gpytorch.mlls import ExactMarginalLogLikelihood
         # from botorch.fit import fit_gpytorch_mll
-        
+
         model = SingleTaskGP(self.train_X, self.train_Y)
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
         fit_gpytorch_mll(mll)
         return model
-    
+
     def acquisition_function(self):
         # from botorch.acquisition import UpperConfidenceBound
-        
+
         UCB = UpperConfidenceBound(self.model, beta=self.beta)
         return UCB
 
     def optimize_acquisition(self, acq_function):
         # from botorch.optim import optimize_acqf
-        
+
         candidates, _ = optimize_acqf(
             acq_function,
             bounds=self.bounds,
@@ -151,7 +150,7 @@ class DiscreteBO(BaseBO):
             new_X = self.optimize_acquisition(acq_function)
             rounded_new_X = torch.round(new_X)
 
-            penalty = float('inf')
+            penalty = float("inf")
             if (rounded_new_X == self.train_X).all(dim=1).any():
                 penalty = 1000  # Arbitrary high value to avoid repetition
 
@@ -162,19 +161,14 @@ class DiscreteBO(BaseBO):
         bounds = [(0.0, self.beta_h), (1e-3, self.l_h)]
 
         # Optimize the objective function
-        result = minimize(objective, initial_guess, bounds=bounds, method='L-BFGS-B')
+        result = minimize(objective, initial_guess, bounds=bounds, method="L-BFGS-B")
         delta_beta, l = result.x
         self.beta += delta_beta
         self.l = l
 
 
-
-
-
-
 # Run the test
 if __name__ == "__main__":
-
     # Griewank function with batch input
     def griewank_function(X):
         r"""
@@ -184,13 +178,14 @@ if __name__ == "__main__":
             X = X.unsqueeze(0)  # Make it a 2D tensor with shape (1, dim)
 
         sum_term = torch.sum(X**2 / 4000, dim=1)
-        prod_term = torch.prod(torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1)
+        prod_term = torch.prod(
+            torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1
+        )
         return sum_term - prod_term + 1
-
 
     # Initialize bounds for the optimization
     bounds = torch.tensor([[-50.0, -50.0, -50.0], [600.0, 600.0, 600.0]])
-    
+
     # Generate initial samples
     X_init = torch.randint(-50, 601, (5, 3)).double()
     Y_init = griewank_function(X_init).unsqueeze(-1)
@@ -198,14 +193,16 @@ if __name__ == "__main__":
     # Create an instance of DiscreteBO and initialize it
     bo = DiscreteBO(bounds=bounds)
     bo.initialize(X_init, Y_init)
-    
+
     # Optimization loop
     for i in range(300):
         new_X = bo.step()
         new_Y = griewank_function(new_X).unsqueeze(-1)
-        
+
         bo.update(new_X, new_Y)
-        print(f"Iteration {i+1}: Suggested point: {new_X.numpy()}, Function value: {new_Y.numpy()}")
+        print(
+            f"Iteration {i+1}: Suggested point: {new_X.numpy()}, Function value: {new_Y.numpy()}"
+        )
 
     print()
     print(f"Best value found: {bo.train_Y.min().item()}")

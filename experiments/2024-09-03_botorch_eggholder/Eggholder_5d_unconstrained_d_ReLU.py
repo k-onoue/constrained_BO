@@ -26,7 +26,6 @@ from src.utils_bo import (
     generate_integer_samples,
     initialize_model,
     log_initial_data,
-    negate_function,
     optimize_acquisition,
 )
 from src.utils_experiment import set_logger
@@ -43,7 +42,9 @@ def run_bo(setting_dict: dict):
         # Step 1: Define the Objective Function and Search Space
         objective_function = eggholder_function
 
-        search_space = torch.tensor([[-512] * 5, [512] * 5]).to(torch.float32).to(device)
+        search_space = (
+            torch.tensor([[-512] * 5, [512] * 5]).to(torch.float32).to(device)
+        )
 
         trans = InputTransformer(search_space, lower_bound=0, upper_bound=1)
 

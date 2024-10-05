@@ -26,7 +26,6 @@ from src.utils_bo import (
     generate_integer_samples,
     initialize_model,
     log_initial_data,
-    negate_function,
     optimize_acquisition,
 )
 from src.utils_experiment import set_logger

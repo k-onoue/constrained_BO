@@ -21,12 +21,10 @@ sys.path.append(PROJECT_DIR)
 
 from src.bnn import BayesianMLPModel
 
-from src.bnn import fit_pytorch_model
 # from src.objectives_botorch import WarcraftObjectiveBoTorch
 # from src.objectives_botorch import generate_initial_data
 from src.utils_experiment import negate_function
 from src.utils_experiment import generate_integer_samples
-from utils_bo import InputTransformer
 
 import logging
 
@@ -80,16 +78,15 @@ def fit_pytorch_model_with_constraint(model, acqf, num_epochs=1000, learning_rat
 
         ones = torch.ones_like(g_eval)
 
-        loss = (
-            lambda1 * (ones - g_eval) * acqf_eval
-            + lambda2 * (-f(X).log_prob(y).T @ g_eval)
+        loss = lambda1 * (ones - g_eval) * acqf_eval + lambda2 * (
+            -f(X).log_prob(y).T @ g_eval
         )
 
         # print(f"g_eval: {g_eval.shape}")
         # print(f"acqf_eval: {acqf_eval.shape}")
         # print(f"f(X): {f(X).log_prob(y).shape}")
         # print(f"f(X): {f(X).log_prob(y[:2]).shape}")
-        
+
         loss = loss.sum() / m
 
         loss.backward()

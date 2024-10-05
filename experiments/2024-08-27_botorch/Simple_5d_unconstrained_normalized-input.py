@@ -71,7 +71,7 @@ def fit_pytorch_model_with_constraint(model, acqf, num_epochs=1000, learning_rat
         optimizer.zero_grad()
 
         # ---------------------------------------------------------------------------------------------
-        # unconstrained 
+        # unconstrained
         g_eval = torch.ones_like(y)
 
         acqf_eval = []

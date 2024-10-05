@@ -89,17 +89,19 @@ def schubert_function(X):
 
     # jの値を1から5までのテンソルで表現
     j = torch.arange(1, 6, dtype=X.dtype, device=X.device).view(1, -1)
-    
+
     # 各次元のXに対して計算を行う
     X_expanded = X.unsqueeze(-1)  # (n, d, 1) の形に拡張
     terms = j * torch.cos((j + 1) * X_expanded + j)  # (n, d, 5)
-    
+
     # 次元ごとにsumを取って、最終的なprodを取る
     result = torch.prod(terms.sum(dim=-1), dim=-1)  # sumは最後の次元、prodは次元d
 
     # 出力が1つの要素しかない場合はスカラー（0次元）にする
     if input_dim == 1:
-        return torch.tensor(result.item()).to(dtype=dtype).to(device=device)  # スカラー値として返す
+        return (
+            torch.tensor(result.item()).to(dtype=dtype).to(device=device)
+        )  # スカラー値として返す
     return result
 
 
@@ -121,6 +123,7 @@ def eggholder_function(X):
         return torch.tensor(result.item()).to(dtype=dtype).to(device=device)
     return result
 
+
 def griewank_function(X):
     dtype = X.dtype
     device = X.device
@@ -141,4 +144,3 @@ def griewank_function(X):
     if input_dim == 1:
         return torch.tensor(result.item()).to(dtype=dtype).to(device=device)
     return result
-

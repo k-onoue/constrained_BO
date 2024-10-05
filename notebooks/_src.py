@@ -11,9 +11,6 @@ sys.path.append(PROJECT_DIR)
 
 from src.objectives_botorch import WarcraftObjectiveBoTorch
 from src.utils_warcraft import (
-    get_opposite,
-    judge_continuity,
-    get_next_coordinate,
     judge_location_validity,
     get_d_to,
     navigate_through_matrix,

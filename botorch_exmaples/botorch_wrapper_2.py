@@ -2,7 +2,6 @@ import torch
 from botorch.acquisition import UpperConfidenceBound
 from botorch.optim import optimize_acqf
 from scipy.optimize import minimize
-from sklearn.preprocessing import StandardScaler
 
 from bnn import BayesianMLPModel
 
@@ -47,7 +46,7 @@ class DiscreteBO:
         if torch.isnan(candidates).any() or torch.isinf(candidates).any():
             print("Warning: Candidates contain NaN or Inf values")
             return None
-        
+
         return candidates
 
     def step(self):
@@ -82,10 +81,10 @@ class DiscreteBO:
             acq_function = self.acquisition_function(adjusted_beta)
             new_X = self.optimize_acquisition(acq_function)
             if new_X is None:
-                return float('inf')
+                return float("inf")
             rounded_new_X = torch.round(new_X)
 
-            penalty = float('inf')
+            penalty = float("inf")
             if (rounded_new_X == self.train_X).all(dim=1).any():
                 penalty = 1000  # Arbitrary high value to avoid repetition
 
@@ -96,7 +95,7 @@ class DiscreteBO:
         bounds = [(0.0, self.beta_h), (1e-3, self.l_h)]
 
         # Optimize the objective function
-        result = minimize(objective, initial_guess, bounds=bounds, method='L-BFGS-B')
+        result = minimize(objective, initial_guess, bounds=bounds, method="L-BFGS-B")
         delta_beta, l = result.x
         self.beta += delta_beta
         self.l = l
@@ -125,7 +124,9 @@ if __name__ == "__main__":
             X = X.unsqueeze(0)  # Make it a 2D tensor with shape (1, dim)
 
         sum_term = torch.sum(X**2 / 4000, dim=1)
-        prod_term = torch.prod(torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1)
+        prod_term = torch.prod(
+            torch.cos(X / torch.sqrt(torch.arange(1, X.shape[1] + 1).float())), dim=1
+        )
         return sum_term - prod_term + 1
 
     objective_function = griewank_function
@@ -150,7 +151,9 @@ if __name__ == "__main__":
         new_Y = objective_function(new_X).unsqueeze(-1).float()  # float に変換
 
         bo.update(new_X, new_Y)
-        print(f"Iteration {i+1}: Suggested point: {new_X.numpy()}, Function value: {new_Y.numpy()}")
+        print(
+            f"Iteration {i+1}: Suggested point: {new_X.numpy()}, Function value: {new_Y.numpy()}"
+        )
 
     print()
     print(f"Best value found: {bo.train_Y.min().item()}")

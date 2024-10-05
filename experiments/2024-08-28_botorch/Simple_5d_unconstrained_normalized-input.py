@@ -6,7 +6,6 @@ import warnings
 from copy import deepcopy
 
 import torch
-import torch.nn.utils as nn_utils
 from botorch.acquisition import UpperConfidenceBound
 from botorch.optim import optimize_acqf
 
@@ -22,6 +21,7 @@ sys.path.append(PROJECT_DIR)
 from src.bnn import BayesianMLPModel
 
 from src.bnn import fit_pytorch_model
+
 # from src.objectives_botorch import WarcraftObjectiveBoTorch
 # from src.objectives_botorch import generate_initial_data
 from src.utils_experiment import negate_function
@@ -71,7 +71,7 @@ from src.utils_experiment import set_logger
 #         optimizer.zero_grad()
 
 #         # ---------------------------------------------------------------------------------------------
-#         # unconstrained 
+#         # unconstrained
 #         g_eval = torch.ones_like(y)
 
 #         acqf_eval = []

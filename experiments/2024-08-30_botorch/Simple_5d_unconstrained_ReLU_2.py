@@ -18,9 +18,15 @@ EXPT_RESULT_DIR = config["paths"]["results_dir"]
 LOG_DIR = config["paths"]["logs_dir"]
 sys.path.append(PROJECT_DIR)
 
-from src.utils_bo import (InputTransformer, evaluate_candidate,
-                          fit_pytorch_model, generate_integer_samples,
-                          initialize_model, log_initial_data, negate_function)
+from src.utils_bo import (
+    InputTransformer,
+    evaluate_candidate,
+    fit_pytorch_model,
+    generate_integer_samples,
+    initialize_model,
+    log_initial_data,
+    negate_function,
+)
 from src.utils_experiment import set_logger
 
 
@@ -147,7 +153,7 @@ if __name__ == "__main__":
             "hidden_unit_size": 64,
             "num_hidden_layers": 3,
             "activation_fn": torch.nn.ReLU(),
-            # "clipping": 
+            # "clipping":
         },
         "model_optim": {
             "num_epochs": 100,

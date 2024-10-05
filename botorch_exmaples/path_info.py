@@ -1,6 +1,6 @@
 import os
 
-temp = __file__.rfind('/', 0, __file__.rfind('/'))
+temp = __file__.rfind("/", 0, __file__.rfind("/"))
 prefix = __file__[:temp]
 
 PROJECT_DIR = prefix

@@ -5,7 +5,6 @@ import re
 import sys
 
 import pandas as pd
-import torch
 
 
 def extract_info_from_filename(filename):
@@ -113,7 +112,7 @@ class OptimLogParser_v1:
             elif "Iteration" in line:
                 mode = "bo_loop"
             elif "Optimization completed." in line:
-                break  
+                break
 
             if mode == "init":
                 self._parse_init_data(line)
@@ -267,7 +266,6 @@ class OptimLogParser:
         self.bo_data = pd.DataFrame(self.bo_data)
 
     def _parse_settings(self, line):
-        from torch.nn import Tanh, ReLU, LeakyReLU
         settings_str = line.split("settings:")[1].strip()
         settings_str = re.sub(r"device\(type='[^']+'\)", "'cpu'", settings_str)
         settings_str = re.sub(r"device\(type=\"[^\"]+\"\)", "'cpu'", settings_str)
@@ -291,7 +289,9 @@ class OptimLogParser:
         if function_value_match:
             function_value = float(function_value_match.group(1))
             # Ensure we have a candidate entry before appending the function value
-            if len(self.initial_data["candidate"]) > len(self.initial_data["function_value"]):
+            if len(self.initial_data["candidate"]) > len(
+                self.initial_data["function_value"]
+            ):
                 self.initial_data["function_value"].append(function_value)
 
         if final_training_loss_match:
@@ -311,7 +311,9 @@ class OptimLogParser:
         )
         iteration_time_match = re.search(r"Iteration time: ([-+]?\d*\.\d+)", line)
         surrogate_mean_match = re.search(r"Suroggate Mean: ([-+]?\d*\.\d+|\d+)", line)
-        surrogate_covariance_match = re.search(r"Suroggate Covariance: ([-+]?\d*\.\d+|\d+)", line)
+        surrogate_covariance_match = re.search(
+            r"Suroggate Covariance: ([-+]?\d*\.\d+|\d+)", line
+        )
         beta_match = re.search(r"Beta: ([-+]?\d*\.\d+|\d+)", line)
 
         if iteration_match:
@@ -337,11 +339,14 @@ class OptimLogParser:
         if surrogate_covariance_match:
             if "surrogate_covariance" not in self.bo_data:
                 self.bo_data["surrogate_covariance"] = []
-            self.bo_data["surrogate_covariance"].append(float(surrogate_covariance_match.group(1)))
+            self.bo_data["surrogate_covariance"].append(
+                float(surrogate_covariance_match.group(1))
+            )
         if beta_match:
             if "beta" not in self.bo_data:
                 self.bo_data["beta"] = []
             self.bo_data["beta"].append(float(beta_match.group(1)))
+
 
 # if __name__ == "__main__":
 

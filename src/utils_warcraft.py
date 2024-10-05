@@ -150,7 +150,7 @@ def generate_random_tuple(category_num, dim, num=1):
 def convert_path_index_to_arr(path, map_shape):
     path_gen_reversed = iter(reversed(path))
     map = np.zeros(map_shape)
-        
+
     for i in range(map_shape[0]):
         for j in range(map_shape[1]):
             map[i, j] = next(path_gen_reversed)
@@ -198,51 +198,51 @@ class WarcraftObjective:
             for j in range(self.shape[1]):
                 direction_matrix[i, j] = self.search_space_1d_dict.get(x[i, j])
         return direction_matrix
-        
+
     def calculate_penalty_type2(self, idx, val, map_shape):
-            # Define the mask dictionary within the function
-            val_mask_dict = {
-                "oo": np.zeros((3, 3)),
-                "ab": np.array([[0, 1, 0], [1, 1, 0], [0, 0, 0]]),
-                "ac": np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]]),
-                "ad": np.array([[0, 0, 0], [1, 1, 0], [0, 1, 0]]),
-                "bc": np.array([[0, 1, 0], [0, 1, 1], [0, 0, 0]]),
-                "bd": np.array([[0, 1, 0], [0, 1, 0], [0, 1, 0]]),
-                "cd": np.array([[0, 0, 0], [0, 1, 1], [0, 1, 0]]),
-            }
+        # Define the mask dictionary within the function
+        val_mask_dict = {
+            "oo": np.zeros((3, 3)),
+            "ab": np.array([[0, 1, 0], [1, 1, 0], [0, 0, 0]]),
+            "ac": np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]]),
+            "ad": np.array([[0, 0, 0], [1, 1, 0], [0, 1, 0]]),
+            "bc": np.array([[0, 1, 0], [0, 1, 1], [0, 0, 0]]),
+            "bd": np.array([[0, 1, 0], [0, 1, 0], [0, 1, 0]]),
+            "cd": np.array([[0, 0, 0], [0, 1, 1], [0, 1, 0]]),
+        }
 
-            # Initialize the expanded array with zeros, sized (2*map_shape[0] + 1, 2*map_shape[1] + 1)
-            arr_expanded = np.zeros((map_shape[0] * 2 + 1, map_shape[1] * 2 + 1))
+        # Initialize the expanded array with zeros, sized (2*map_shape[0] + 1, 2*map_shape[1] + 1)
+        arr_expanded = np.zeros((map_shape[0] * 2 + 1, map_shape[1] * 2 + 1))
 
-            # Calculate the starting positions for the mask application
-            x_s, y_s = idx[0] * 2, idx[1] * 2
+        # Calculate the starting positions for the mask application
+        x_s, y_s = idx[0] * 2, idx[1] * 2
 
-            # Apply the corresponding mask from the dictionary based on 'val'
-            arr_expanded[x_s : x_s + 3, y_s : y_s + 3] = val_mask_dict.get(
-                val, np.zeros((3, 3))
-            )
+        # Apply the corresponding mask from the dictionary based on 'val'
+        arr_expanded[x_s : x_s + 3, y_s : y_s + 3] = val_mask_dict.get(
+            val, np.zeros((3, 3))
+        )
 
-            # Get the indices of the ones in the expanded array
-            ones_indices = np.argwhere(arr_expanded == 1)
+        # Get the indices of the ones in the expanded array
+        ones_indices = np.argwhere(arr_expanded == 1)
 
-            # Inicialize a variable to store the minimum distance
-            row = arr_expanded.shape[0] - 1
-            col = arr_expanded.shape[1] - 1
+        # Inicialize a variable to store the minimum distance
+        row = arr_expanded.shape[0] - 1
+        col = arr_expanded.shape[1] - 1
 
-            max_distance = manhattan_distance((0, 0), (row, col-1))
-            min_distance = max_distance
+        max_distance = manhattan_distance((0, 0), (row, col - 1))
+        min_distance = max_distance
 
-            index_goal_list = [(row, col-1), (row-1, col)]
+        index_goal_list = [(row, col - 1), (row - 1, col)]
 
-            # Iterate through all pairs of (1 indices, target indices)
-            for one_idx in ones_indices:
-                for target_idx in index_goal_list:
-                    dist = manhattan_distance(one_idx, target_idx)
-                    if dist < min_distance:
-                        min_distance = dist
+        # Iterate through all pairs of (1 indices, target indices)
+        for one_idx in ones_indices:
+            for target_idx in index_goal_list:
+                dist = manhattan_distance(one_idx, target_idx)
+                if dist < min_distance:
+                    min_distance = dist
 
-            penalty = min_distance / max_distance
-            return penalty
+        penalty = min_distance / max_distance
+        return penalty
 
     def __call__(self, x):
         """Calculate the objective function."""
@@ -251,7 +251,7 @@ class WarcraftObjective:
         else:
             direction_matrix = x
 
-        mask = np.where(direction_matrix == 'oo', 0, 1)
+        mask = np.where(direction_matrix == "oo", 0, 1)
         penalty_1 = np.sum(self.weight_matrix * mask)
 
         start = (0, 0)
@@ -262,14 +262,16 @@ class WarcraftObjective:
         # penalty_2 = np.sum(self.weight_matrix[point] for point in history)
 
         if history:
-            penalty_3 = self.calculate_penalty_type2(history[-1], direction_matrix[history[-1]], self.shape)
+            penalty_3 = self.calculate_penalty_type2(
+                history[-1], direction_matrix[history[-1]], self.shape
+            )
         else:
             penalty_3 = 1
 
         # print(f'penalty_1: {penalty_1}')
         # # print(f'penalty_2: {penalty_2}')
         # print(f'penalty_3: {penalty_3}')
-        
+
         # score = penalty_1 + penalty_2 + penalty_3
         score = penalty_1 + penalty_3
         return score
@@ -280,14 +282,13 @@ class WarcraftObjective:
         print(direction_matrix)
 
 
-
 # if __name__ == "__main__":
 #     import optuna
 
 #     def objective(trial):
 #         # Define the shape of the array (same as map_targeted)
 #         shape = (2, 2)
-        
+
 #         # Suggest values for each element in the array, which can be 0 to 6
 #         x = np.array([
 #             [trial.suggest_int('x00', 0, 6), trial.suggest_int('x01', 0, 6)],
@@ -297,21 +298,20 @@ class WarcraftObjective:
 #         # Calculate the score using WarcraftObjective
 #         map_targeted_scaled = np.array([[1, 4], [2, 1]]) / np.sum(np.array([[1, 4], [2, 1]]))
 #         objective_function = WarcraftObjective(map_targeted_scaled)
-        
+
 #         # Calculate the objective function score based on x
 #         score = objective_function(x)
-        
+
 #         # Since we want to maximize the score, return -score for minimization
 #         return score
-    
+
 #     # Run the optimization using Optuna
 #     study = optuna.create_study(direction='minimize')  # We minimize because we return -score
 #     study.optimize(objective, n_trials=100)
-    
+
 #     # Print the best result
 #     print(f"Best value: {study.best_value}")
 #     print(f"Best params: {study.best_params}")
-
 
 
 # if __name__ == "__main__":

@@ -20,6 +20,7 @@ LOG_DIR = config["paths"]["logs_dir"]
 sys.path.append(PROJECT_DIR)
 
 from src.bnn import BayesianMLPModel
+
 # from src.bnn import fit_pytorch_model
 # from src.objectives_botorch import WarcraftObjectiveBoTorch
 # from src.objectives_botorch import generate_initial_data
@@ -27,13 +28,12 @@ from src.utils_experiment import negate_function
 from src.utils_experiment import generate_integer_samples
 
 import logging
+
 # from src.utils_experiment import log_print
 from src.utils_experiment import set_logger
 
 
-def fit_pytorch_model_with_constraint(
-    model, acqf, num_epochs=1000, learning_rate=0.01
-):
+def fit_pytorch_model_with_constraint(model, acqf, num_epochs=1000, learning_rate=0.01):
     def g(X):
         """
         制約：x1 == x2
@@ -44,13 +44,13 @@ def fit_pytorch_model_with_constraint(
         return (X1 == X2).float().unsqueeze(1)
 
     # def g(X):
-    #     constraint1 = X[:, 5] == -3. 
-    #     constraint2 = X[:, 3] == -3. 
+    #     constraint1 = X[:, 5] == -3.
+    #     constraint2 = X[:, 3] == -3.
     #     constraint = constraint1 & constraint2
     #     return constraint.float().unsqueeze(1)
-    
+
     # def g(X):
-    #     constraint = X[:, 5] == -3. 
+    #     constraint = X[:, 5] == -3.
     #     return constraint.float().unsqueeze(1)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -87,7 +87,7 @@ def fit_pytorch_model_with_constraint(
         loss.backward()
         nn_utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
-    
+
     return loss.item()
 
 
@@ -101,8 +101,8 @@ def run_bo(setting_dict):
         # ---------------------------------------------------------------------------------------------
         # Step 1: Define the Objective Function
         def objective_function(X):
-            return (X ** 2).sum(dim=-1)
-        
+            return (X**2).sum(dim=-1)
+
         objective_function = negate_function(objective_function)
 
         bounds = torch.tensor([[-10] * 5, [10] * 5], dtype=torch.float32).to(device)
@@ -115,7 +115,9 @@ def run_bo(setting_dict):
 
         logging.info("Initial data points and corresponding function values:")
         for i in range(initial_data_size):
-            logging.info(f"Candidate: {X_train[i].cpu().numpy()}, Function Value: {y_train[i].item()}")
+            logging.info(
+                f"Candidate: {X_train[i].cpu().numpy()}, Function Value: {y_train[i].item()}"
+            )
 
         # Flatten X_train and move it to the correct device
         n_samples = X_train.shape[0]
@@ -130,7 +132,7 @@ def run_bo(setting_dict):
             y_train,
             hidden_unit_size=model_settings["hidden_unit_size"],
             num_hidden_layers=model_settings["num_hidden_layers"],
-            clipping=True
+            clipping=True,
         ).to(device)
 
         acq_optim_settings = setting_dict["acquisition_optim"]
@@ -154,13 +156,13 @@ def run_bo(setting_dict):
 
         # Repeat optimization for a specified number of iterations
         n_iterations = setting_dict["bo_iter"]
-        best_value = float('-inf')
+        best_value = float("-inf")
 
         for iteration in range(n_iterations):
             iter_start_time = time.time()
-            
+
             logging.info(f"Iteration {iteration + 1}/{n_iterations}")
-            
+
             # ---------------------------------------------------------------------------------------------
             # Step 4: Define and optimize the Acquisition Function
             acq_optim_settings = setting_dict["acquisition_optim"]
@@ -192,9 +194,7 @@ def run_bo(setting_dict):
             logging.info(f"Function Value: {y_new.item()}")
 
             X_train = torch.cat([X_train.to(device), candidate.unsqueeze(0).to(device)])
-            y_train = torch.cat(
-                [y_train.to(device), y_new.unsqueeze(-1).to(device)]
-            )
+            y_train = torch.cat([y_train.to(device), y_new.unsqueeze(-1).to(device)])
             X_train_flat = X_train.view(X_train.shape[0], -1).float().to(device)
 
             # ---------------------------------------------------------------------------------------------
@@ -220,7 +220,7 @@ def run_bo(setting_dict):
             iter_end_time = time.time()
             elapsed_time = iter_end_time - iter_start_time
             logging.info(f"Iteration time: {elapsed_time:.4f} seconds")
-        
+
     except Exception as e:
         logging.exception(e)
         raise e
