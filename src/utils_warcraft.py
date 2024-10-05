@@ -147,8 +147,17 @@ def generate_random_tuple(category_num, dim, num=1):
     return [tuple(np.random.randint(0, category_num, dim)) for _ in range(num)]
 
 
-def convert_tensor_index_to_map(path, map_shape):
+def convert_path_index_to_arr(path, map_shape):
+
+    print()
+    print(f'path: {path}')
+    print(f'map_shape: {map_shape}')
+    print()
+
     path_gen_reversed = iter(reversed(path))
+
+    print(f'path_gen_reversed: {path_gen_reversed}')
+
     map = np.zeros(map_shape)
         
     for i in range(map_shape[0]):
@@ -266,9 +275,9 @@ class WarcraftObjective:
         else:
             penalty_3 = 1
 
-        print(f'penalty_1: {penalty_1}')
-        # print(f'penalty_2: {penalty_2}')
-        print(f'penalty_3: {penalty_3}')
+        # print(f'penalty_1: {penalty_1}')
+        # # print(f'penalty_2: {penalty_2}')
+        # print(f'penalty_3: {penalty_3}')
         
         # score = penalty_1 + penalty_2 + penalty_3
         score = penalty_1 + penalty_3
