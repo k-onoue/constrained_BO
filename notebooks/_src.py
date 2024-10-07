@@ -18,7 +18,6 @@ from src.utils_warcraft import (
     get_opposite,
     get_next_coordinate,
     judge_continuity,
-    generate_initial_data,
 )
 
 __all__ = [
@@ -30,5 +29,4 @@ __all__ = [
     "get_d_to",
     "navigate_through_matrix",
     "manhattan_distance",
-    "generate_initial_data",
 ]

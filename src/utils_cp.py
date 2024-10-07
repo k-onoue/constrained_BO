@@ -1,34 +1,41 @@
+import logging
+from typing import Literal
+
 import numpy as np
 from tensorly.cp_tensor import cp_to_tensor
 from tensorly.decomposition import non_negative_parafac
-from utils_warcraft import (
-    generate_random_tuple,
+from .utils_warcraft import (
     convert_path_index_to_arr,
-    WarcraftObjective,
 )
 
 
 class InputManager:
-    def __init__(self, category_num, dim, map_shape, objective_function):
+    def __init__(self, category_num, dim, map_shape, objective_function, maximize=True):
         """
         Initialize the InputManager to handle tensor evaluations and indices.
-
-        Parameters:
-        - category_num: int, the number of categories for the tensor dimensions.
-        - dim: int, the number of dimensions in the tensor.
-        - map_shape: tuple, the shape of the map (used to convert indices to arrays).
-        - objective_function: callable, the objective function to evaluate.
         """
         self.category_num = category_num
         self.dim = dim
         self.map_shape = map_shape
         self.objective_function = objective_function
+        self.maximize = maximize
 
-        # Initialize tensors for evaluations and masking
-        self.tensor_eval = np.zeros((category_num,) * dim)
-        self.tensor_eval_bool = np.zeros((category_num,) * dim)
+        # Initialize tensors for evaluations with NaN
+        self.tensor_eval = np.full(
+            (category_num,) * dim, np.nan
+        )  # Now initialized with NaN
+        self.tensor_eval_bool = np.zeros(
+            (category_num,) * dim
+        )  # Bool mask, keeping as zeros
         self.index_list = []
         self.index_array_list = []
+
+        self.tensor_eval_p1 = np.full(
+            (category_num,) * dim, np.nan
+        )  # Initialized with NaN
+        self.tensor_eval_p3 = np.full(
+            (category_num,) * dim, np.nan
+        )  # Initialized with NaN
 
     def add_indices(self, index_list):
         """
@@ -45,10 +52,18 @@ class InputManager:
                 self.index_array_list.append(path_arr)
 
                 # Evaluate the objective function and update tensors
-                self.tensor_eval[index] = self.objective_function(path_arr)
+                val, p1, p3 = self.objective_function(path_arr)
+                self.tensor_eval[index] = val
                 self.tensor_eval_bool[index] = 1
 
-    def get_evaluation_tensor(self):
+                self.tensor_eval_p1[index] = p1
+                self.tensor_eval_p3[index] = p3
+
+                logging.info(
+                    f"Evaluated index: {index}, Value: {val}, P1: {p1}, P3: {p3}"
+                )
+
+    def get_evaluation_tensor(self) -> np.ndarray:
         """
         Get the tensor of evaluations.
 
@@ -57,7 +72,7 @@ class InputManager:
         """
         return self.tensor_eval
 
-    def get_mask_tensor(self):
+    def get_mask_tensor(self) -> np.ndarray:
         """
         Get the tensor mask where evaluations have been performed.
 
@@ -66,18 +81,37 @@ class InputManager:
         """
         return self.tensor_eval_bool
 
-    def get_index_list(self):
+    def get_index_list(self) -> list[tuple[int]]:
+        return self.index_list
+
+    def get_optimal_value_and_index(self) -> tuple[float, tuple[int]]:
         """
-        Get the list of evaluated indices.
+        Get the optimal value and the index that achieves it.
 
         Returns:
-        - index_list: list of tuples, the list of evaluated indices.
+        - optimal_value: float, the optimal evaluation value (max or min based on self.maximize).
+        - optimal_index: tuple of ints, the index where the optimal value occurs.
         """
-        return self.index_list
+        arg_opt_func = np.nanargmax if self.maximize else np.nanargmin
+        optimal_index = np.unravel_index(
+            arg_opt_func(self.tensor_eval), self.tensor_eval.shape
+        )
+        optimal_value = self.tensor_eval[optimal_index]
+
+        return optimal_index, optimal_value
 
 
 class ParafacSampler:
-    def __init__(self, cp_rank, als_iter_num, mask_ratio):
+    def __init__(
+        self,
+        cp_rank: int,
+        als_iter_num: int,
+        mask_ratio: float,
+        trade_off_param: float = 1.0,
+        batch_size: int = 10,
+        maximize: bool = True,
+        distribution_type: Literal["uniform", "normal"] = "uniform",
+    ):
         """
         Initialize the ParafacSampler with the necessary settings.
 
@@ -85,39 +119,52 @@ class ParafacSampler:
         - cp_rank: int, the rank of the CP decomposition.
         - als_iter_num: int, the number of ALS iterations to perform during decomposition.
         - mask_ratio: float, the ratio to control the number of masks for CP decomposition.
+        - trade_off_param: float, the trade-off parameter between exploration and exploitation.
+        - batch_size: int, the number of points to suggest. Default is 10.
+        - maximize: bool, if True, maximize UCB values. If False, minimize UCB values.
         """
         self.cp_rank = cp_rank
         self.als_iter_num = als_iter_num
         self.mask_ratio = mask_ratio
+        self.trade_off_param = trade_off_param
+        self.batch_size = batch_size
+        self.maximize = maximize
+        self.distribution_type = distribution_type
 
-    def sample(self, tensor_eval, tensor_eval_bool, all_evaluated_indices):
+    def _fit(
+        self,
+        tensor_eval: np.ndarray,
+        tensor_eval_bool: np.ndarray,
+        all_evaluated_indices: list,
+        distribution_type: Literal["uniform", "normal"],
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Perform CP decomposition and return the mean and variance tensors.
-
-        Parameters:
-        - tensor_eval: np.ndarray, the current evaluation tensor.
-        - tensor_eval_bool: np.ndarray, the mask tensor indicating evaluated points.
-        - all_evaluated_indices: list, the indices of all evaluated points.
-
-        Returns:
-        - mean_tensor: np.ndarray, the mean tensor calculated from the CP decomposition.
-        - variance_tensor: np.ndarray, the variance tensor calculated from the CP decomposition.
         """
-        # Create mask_split_list within this method
         div = int(1 / self.mask_ratio)
         mask_split_list = split_list_equally(all_evaluated_indices, div)
 
         tensors_list = []
 
-        # Perform CP decomposition with masking
+        init_tensor_eval = generate_random_array(
+            low=np.nanmin(tensor_eval),  # Use nanmin to avoid issues with NaN
+            high=np.nanmax(tensor_eval),  # Use nanmax to avoid issues with NaN
+            shape=tensor_eval.shape,
+            distribution_type=distribution_type,
+            mean=np.nanmean(tensor_eval),  # Use nanmean to handle NaN values
+            std_dev=np.nanstd(tensor_eval),  # Use nanstd to handle NaN values
+        )
+
+        init_tensor_eval[tensor_eval_bool == 1] = tensor_eval[tensor_eval_bool == 1]
+
         for mask_list in mask_split_list:
-            mask_tensor = tensor_eval_bool.copy()
+            mask_tensor = np.ones_like(tensor_eval_bool)
             for mask_index in mask_list:
                 mask_tensor[mask_index] = 0
 
             # Perform CP decomposition
             cp_tensor = non_negative_parafac(
-                tensor_eval,
+                init_tensor_eval,
                 rank=self.cp_rank,
                 mask=mask_tensor,
                 n_iter_max=self.als_iter_num,
@@ -132,12 +179,109 @@ class ParafacSampler:
         # Calculate mean and variance tensors
         tensors_stack = np.stack(tensors_list)
         mean_tensor = np.mean(tensors_stack, axis=0)
-        variance_tensor = np.var(tensors_stack, axis=0)
+        std_tensor = np.std(tensors_stack, axis=0)
 
-        return mean_tensor, variance_tensor
+        # Replace the mean and variance of known points with the original values and zeros
+        mean_tensor[tensor_eval_bool == 1] = tensor_eval[tensor_eval_bool == 1]
+        std_tensor[tensor_eval_bool == 1] = 0
+
+        return mean_tensor, std_tensor
+
+    def _suggest_ucb_candidates(
+        self,
+        mean_tensor: np.ndarray,
+        std_tensor: np.ndarray,
+        trade_off_param: float,
+        batch_size: int,
+        maximize: bool,
+    ) -> list[tuple[int]]:
+        """
+        Suggest candidate points based on UCB values, selecting the top batch_size points.
+
+        Parameters:
+        - mean_tensor: np.ndarray, the mean values at each point.
+        - std_tensor: np.ndarray, the std values at each point.
+        - trade_off_param: float, the trade-off parameter between exploration and exploitation.
+        - batch_size: int, the number of points to suggest. Default is 10.
+        - maximize: bool, if True, maximize UCB values. If False, minimize UCB values.
+
+        Returns:
+        - indices: list of tuples, the indices of the top batch_size points based on UCB.
+        """
+
+        def _ucb(mean_tensor, std_tensor, trade_off_param, maximize=True) -> np.ndarray:
+            mean_tensor = mean_tensor if maximize else -mean_tensor
+            ucb_values = mean_tensor + trade_off_param * std_tensor
+            return ucb_values
+
+        # Calculate the UCB values using the internal function
+        ucb_values = _ucb(mean_tensor, std_tensor, trade_off_param, maximize)
+
+        # Flatten the tensor and get the indices of the top UCB values
+        flat_indices = np.argsort(ucb_values.flatten())[
+            ::-1
+        ]  # Sort in descending order
+
+        # top_indices = [
+        #     np.unravel_index(flat_index, ucb_values.shape)
+        #     for flat_index in flat_indices[:batch_size]
+        # ]
+        top_indices = np.unravel_index(flat_indices[:batch_size], ucb_values.shape)
+        top_indices = list(zip(*top_indices))
+
+        for index in top_indices:
+            logging.info(
+                f"UCB value at {index}: {ucb_values[index]}, Mean: {mean_tensor[index]}, Std: {std_tensor[index]}"
+            )
+
+        return top_indices
+
+    def sample(
+        self,
+        tensor_eval: np.ndarray,
+        tensor_eval_bool: np.ndarray,
+        all_evaluated_indices: list,
+    ) -> list[tuple[int]]:
+        """
+        Perform sampling by calculating the mean and variance tensors using CP decomposition,
+        then suggesting candidate points based on UCB values.
+
+        Parameters:
+        - tensor_eval: np.ndarray, the current evaluation tensor.
+        - tensor_eval_bool: np.ndarray, the mask tensor indicating evaluated points.
+        - all_evaluated_indices: list, the indices of all evaluated points.
+
+        Returns:
+        - indices: list of tuples, the indices of the top batch_size points based on UCB.
+        """
+        # Perform CP decomposition to get the mean and variance tensors
+        mean_tensor, std_tensor = self._fit(
+            tensor_eval, tensor_eval_bool, all_evaluated_indices, self.distribution_type
+        )
+
+        # Display the mean and variance tensors
+        logging.info(f"Mean tensor min: {np.min(mean_tensor)}")
+        logging.info(f"Mean tensor mean: {np.mean(mean_tensor)}")
+        logging.info(f"Mean tensor std: {np.std(mean_tensor)}")
+        logging.info(f"Mean tensor max: {np.max(mean_tensor)}")
+        logging.info(f"Std tensor min: {np.min(std_tensor)}")
+        logging.info(f"Std tensor mean: {np.mean(std_tensor)}")
+        logging.info(f"Std tensor std: {np.std(std_tensor)}")
+        logging.info(f"Std tensor max: {np.max(std_tensor)}")
+
+        # Use the mean and variance tensors to suggest the top candidates
+        return self._suggest_ucb_candidates(
+            mean_tensor=mean_tensor,
+            std_tensor=std_tensor,
+            trade_off_param=self.trade_off_param,
+            batch_size=self.batch_size,
+            maximize=self.maximize,
+        )
 
 
-def split_list_equally(input_list, div):
+def split_list_equally(
+    input_list: list[tuple[int]], div: int
+) -> list[list[tuple[int]]]:
     quotient, remainder = divmod(len(input_list), div)
     result = []
     start = 0
@@ -148,142 +292,34 @@ def split_list_equally(input_list, div):
     return result
 
 
-def suggest_ucb_candidates(
-    mean_tensor, variance_tensor, trade_off_param=1.0, batch_size=10, maximize=True
-):
+def generate_random_array(
+    low: float,
+    high: float,
+    shape: tuple[int],
+    distribution_type: Literal["uniform", "normal"] = "uniform",
+    mean: float = 0,
+    std_dev: float = 1,
+) -> np.ndarray:
     """
-    Suggest candidate points based on UCB values, selecting the top batch_size points.
+    Generate an array of random numbers with specified bounds and distribution type.
 
     Parameters:
-    - mean_tensor: np.ndarray, the mean values at each point.
-    - variance_tensor: np.ndarray, the variance values at each point.
-    - trade_off_param: float, the trade-off parameter between exploration and exploitation.
-    - batch_size: int, the number of points to suggest. Default is 10.
-    - maximize: bool, if True, maximize UCB values. If False, minimize UCB values.
+    - low: float, the lower bound of the random values.
+    - high: float, the upper bound of the random values.
+    - shape: tuple, the shape of the output array.
+    - distribution_type: str, "uniform" or "normal" to choose the distribution type.
+    - mean: float, the mean value for the normal distribution (default is 0).
+    - std_dev: float, the standard deviation for the normal distribution (default is 1).
 
     Returns:
-    - indices: list of tuples, the indices of the top batch_size points based on UCB.
+    - np.ndarray: array of random numbers with the specified properties.
     """
-
-    def _ucb(mean_tensor, variance_tensor, trade_off_param, maximize=True):
-        """
-        Internal function to compute the UCB values based on the mean and variance tensors.
-
-        Parameters:
-        - mean_tensor: np.ndarray, the mean values at each point.
-        - variance_tensor: np.ndarray, the variance values at each point.
-        - trade_off_param: float, the trade-off parameter between exploration and exploitation.
-        - maximize: bool, if True, maximize UCB values. If False, minimize UCB values.
-
-        Returns:
-        - ucb_values: np.ndarray, the computed UCB values.
-        """
-        mean_tensor = mean_tensor if maximize else -mean_tensor
-        ucb_values = mean_tensor + trade_off_param * np.sqrt(variance_tensor)
-        return ucb_values
-
-    # Calculate the UCB values using the internal function
-    ucb_values = _ucb(mean_tensor, variance_tensor, trade_off_param, maximize)
-
-    # Flatten the tensor and get the indices of the top UCB values
-    flat_indices = np.argsort(ucb_values.flatten())[::-1]  # Sort in descending order
-    top_indices = np.unravel_index(flat_indices[:batch_size], mean_tensor.shape)
-
-    # Combine the multi-dimensional indices into a list of tuples
-    top_indices = list(zip(*top_indices))
-
-    return top_indices
-
-
-if __name__ == "__main__":
-    map_targeted = np.array([[1, 4], [2, 1]])
-    map_targeted_scaled = map_targeted / np.sum(map_targeted)
-
-    settings = {
-        "name": "test" * 10,
-        "seed": 0,
-        "category_num": 7,
-        "iter": 10,  # Number of iterations for Bayesian optimization
-        "init_eval_num": 7**3,
-        "cp_settings": {
-            "dim": len(map_targeted.flatten()),
-            "rank": 2,
-            "als_iterations": 100,
-            "mask_ratio": 0.2,
-        },
-        "acqf_settings": {
-            "trade_off_param": 1.0,
-            "batch_size": 10,
-            "maximize": False,
-        },
-    }
-
-    # General settings
-    seed = settings["seed"]
-    category_num = settings["category_num"]
-    iter_num = settings["iter"]  # Number of iterations
-    init_eval_num = settings["init_eval_num"]
-
-    # CP decomposition settings
-    dim = settings["cp_settings"]["dim"]
-    cp_rank = settings["cp_settings"]["rank"]
-    als_iter_num = settings["cp_settings"]["als_iterations"]
-    mask_ratio = settings["cp_settings"]["mask_ratio"]
-
-    # Acquisition function settings
-    trade_off_param = settings["acqf_settings"]["trade_off_param"]
-    batch_size = settings["acqf_settings"]["batch_size"]
-    maximize = settings["acqf_settings"]["maximize"]
-
-    # Initialize objective function
-    objective_function = WarcraftObjective(map_targeted_scaled)
-
-    # Initialize InputManager
-    input_manager = InputManager(
-        category_num, dim, map_targeted.shape, objective_function
-    )
-
-    # Initialize ParafacSampler
-    parafac_sampler = ParafacSampler(cp_rank, als_iter_num, mask_ratio)
-
-    # Generate initial random paths
-    initial_path_index_list = generate_random_tuple(
-        category_num=category_num, dim=dim, num=init_eval_num
-    )
-
-    # Add initial indices to the input manager
-    input_manager.add_indices(initial_path_index_list)
-
-    # Retrieve tensors and indices
-    tensor_eval = input_manager.get_evaluation_tensor()
-    tensor_eval_bool = input_manager.get_mask_tensor()
-    all_evaluated_indices = input_manager.get_index_list()
-
-    # Bayesian Optimization loop
-    for iteration in range(iter_num):
-        print(f"\nIteration {iteration + 1}/{iter_num}")
-
-        # Perform CP decomposition and get mean and variance tensors
-        mean_tensor, variance_tensor = parafac_sampler.sample(
-            tensor_eval, tensor_eval_bool, all_evaluated_indices
-        )
-
-        # Display the mean and variance tensors
-        print(f"Mean tensor max: {np.max(mean_tensor)}, min: {np.min(mean_tensor)}")
-        print(
-            f"Variance tensor max: {np.max(variance_tensor)}, min: {np.min(variance_tensor)}"
-        )
-
-        # Suggest new indices based on UCB
-        suggested_indices = suggest_ucb_candidates(
-            mean_tensor, variance_tensor, trade_off_param, batch_size, maximize
-        )
-        print(f"Suggested indices: {suggested_indices}")
-
-        # Add the new indices to the input manager and evaluate
-        input_manager.add_indices(suggested_indices)
-
-        # Update tensors and indices
-        tensor_eval = input_manager.get_evaluation_tensor()
-        tensor_eval_bool = input_manager.get_mask_tensor()
-        all_evaluated_indices = input_manager.get_index_list()
+    if distribution_type == "uniform":
+        # Generate uniform random numbers
+        return np.random.uniform(low, high, shape)
+    elif distribution_type == "normal":
+        # Generate normal random numbers and clip them to the specified bounds
+        normal_random = np.random.normal(mean, std_dev, shape)
+        return np.clip(normal_random, low, high)
+    else:
+        raise ValueError("distribution_type must be either 'uniform' or 'normal'.")

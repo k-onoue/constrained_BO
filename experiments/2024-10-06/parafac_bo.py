@@ -8,6 +8,7 @@ from _src import (
     ParafacSampler,
     WarcraftObjective,
     generate_random_tuple,
+    convert_path_index_to_arr,
 )
 from _src import LOG_DIR
 from _src import set_logger
@@ -30,6 +31,7 @@ def run_bo(settings: dict):
         cp_rank = settings["cp_settings"]["rank"]
         als_iter_num = settings["cp_settings"]["als_iterations"]
         mask_ratio = settings["cp_settings"]["mask_ratio"]
+        distribution_type = settings["cp_settings"]["random_dist_type"]
 
         # Acquisition function settings
         trade_off_param = settings["acqf_settings"]["trade_off_param"]
@@ -52,6 +54,7 @@ def run_bo(settings: dict):
             trade_off_param=trade_off_param,
             batch_size=batch_size,
             maximize=maximize,
+            distribution_type=distribution_type,
         )
 
         # Generate initial random paths
@@ -69,7 +72,13 @@ def run_bo(settings: dict):
 
         # Bayesian Optimization loop
         for iteration in range(iter_num):
-            print(f"\nIteration {iteration + 1}/{iter_num}")
+            logging.info(f"Iteration {iteration + 1}/{iter_num}")
+
+            # print()
+            # print()
+            # logging.info(f"tensor_eval nansum: {np.nansum(tensor_eval_bool)}")
+            # logging.info(f"tensor_eval bool nansum: {np.nansum(tensor_eval_bool)}")
+            # logging.info(f"all_evaluated_indices: {all_evaluated_indices}")
 
             # Perform CP decomposition and get mean and variance tensors
             # Suggest new indices based on UCB
@@ -90,6 +99,9 @@ def run_bo(settings: dict):
             opt_index, opt_val = input_manager.get_optimal_value_and_index()
             logging.info(f"Optimal index: {opt_index}")
             logging.info(f"Optimal value: {opt_val}")
+            logging.info(
+                objective_function(convert_path_index_to_arr(opt_index, (2, 2)))
+            )
 
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}", exc_info=True)
@@ -112,16 +124,17 @@ if __name__ == "__main__":
             "dim": len(map_targeted.flatten()),
             "rank": 2,
             "als_iterations": 100,
-            "mask_ratio": 0.2,
-            "random_dist_type": "normal",
+            "mask_ratio": 0.1,
+            "random_dist_type": "uniform",
         },
         "acqf_settings": {
-            "trade_off_param": 1.0,
+            "trade_off_param": 1.0 * 3,
             "batch_size": 10,
             "maximize": False,
         },
     }
 
     set_logger(settings["name"], LOG_DIR)
+    logging.info(f"Settings: {settings}")
 
     run_bo(settings)

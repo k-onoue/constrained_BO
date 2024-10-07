@@ -83,22 +83,45 @@ def navigate_through_matrix(direction_matrix, start, goal):
     current = start
     shape = direction_matrix.shape
 
-    if direction_matrix[current] in ["cd", "oo"]:
+    # Determine the initial direction based on the current cell
+    current_direction = direction_matrix[current]
+
+    # If "a" or "b" is present in the current direction, set d_to to the other direction
+    if "a" in current_direction or "b" in current_direction:
+        d_to = (
+            get_d_to("a", current_direction)
+            if "a" in current_direction
+            else get_d_to("b", current_direction)
+        )
+    else:
+        return history  # If neither "a" nor "b" is present, no movement is possible, so return the history
+
+    # If the current direction is exactly "ab", append the current position and return the history
+    if current_direction == "ab":
+        history.append(current)
         return history
 
+    # Append the initial position to the history
     history.append(current)
-    d_to = "d"
     next_pos = get_next_coordinate(d_to, current)
 
+    # Continue navigating through the matrix while the position is valid and hasn't reached the goal
     while judge_location_validity(next_pos, shape) and current != goal:
+        # If the next position is "oo", navigation cannot continue
+        if direction_matrix[next_pos] == "oo":
+            break
+
+        # If continuity is broken, stop navigation
         if not judge_continuity(d_to, direction_matrix[next_pos]):
             break
 
+        # Move to the next position and append it to the history
         current = next_pos
         history.append(current)
         if current == goal:
             break
 
+        # Determine the new direction based on the current position
         direction = direction_matrix[current]
         d_from = get_opposite(d_to)
         d_to = get_d_to(d_from, direction)
@@ -200,6 +223,10 @@ class WarcraftObjective:
         return direction_matrix
 
     def calculate_penalty_type2(self, idx, val, map_shape):
+        print(f"idx: {idx}")
+        print(f"val: {val}")
+        print(f"map_shape: {map_shape}")
+
         # Define the mask dictionary within the function
         val_mask_dict = {
             "oo": np.zeros((3, 3)),
@@ -274,12 +301,52 @@ class WarcraftObjective:
 
         # score = penalty_1 + penalty_2 + penalty_3
         score = penalty_1 + penalty_3
-        return score
+        return score, penalty_1, penalty_3
 
     def visualize(self, x):
         """Visualize the direction matrix."""
         direction_matrix = self.tensor_to_string(x)
         print(direction_matrix)
+
+
+# if __name__ == "__main__":
+#     direction_matrix = np.array([["ad", "bc"], ["bc", "ac"]])
+
+#     history = navigate_through_matrix(direction_matrix, (0, 0), (1, 1))
+#     print(history)
+
+#     direction_matrix = np.array([["ab", "bc"], ["bc", "ac"]])
+
+#     history = navigate_through_matrix(direction_matrix, (0, 0), (1, 1))
+#     print(history)
+
+#     direction_matrix = np.array([["cd", "bc"], ["bc", "ac"]])
+
+#     history = navigate_through_matrix(direction_matrix, (0, 0), (1, 1))
+#     print(history)
+
+#     direction_matrix = np.array([["oo", "bc"], ["bc", "ac"]])
+
+#     history = navigate_through_matrix(direction_matrix, (0, 0), (1, 1))
+#     print(history)
+
+# if __name__ == "__main__":
+# map_targeted = np.array([[1, 4], [2, 1]])
+# objective_function = WarcraftObjective(map_targeted)
+# # objective_function(np.array([["bd", "oo"], ["oo", "oo"]]))
+
+# arr = np.array([
+#     [1, 4],
+#     [2, 1]
+# ]) / 7
+# print(arr)
+# print()
+
+# map = convert_path_index_to_arr((4, 4, 0, 4), (2, 2))
+# print(map)
+# print(objective_function(map))
+
+# print(objective_function.tensor_to_string(map))
 
 
 # if __name__ == "__main__":
